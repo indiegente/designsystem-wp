@@ -1,0 +1,25 @@
+/* src/tokens/design-tokens.css */
+:root {
+  /* Colors */
+  --tl-primary-500: #0ea5e9;
+  --tl-primary-600: #0284c7;
+  --tl-secondary-500: #eab308;
+  --tl-accent-500: #ec4899;
+  --tl-neutral-900: #171717;
+  --tl-neutral-100: #f5f5f5;
+  
+  /* Typography */
+  --tl-font-primary: 'Inter', -apple-system, sans-serif;
+  --tl-font-size-lg: 1.125rem;
+  --tl-font-size-3xl: 1.875rem;
+  --tl-font-weight-semibold: 600;
+  
+  /* Spacing */
+  --tl-spacing-4: 1rem;
+  --tl-spacing-6: 1.5rem;
+  --tl-spacing-8: 2rem;
+  
+  /* Effects */
+  --tl-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --tl-transition-normal: 250ms ease-in-out;
+}
