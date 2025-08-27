@@ -1,8 +1,9 @@
 import './hero-section.js';
 
 export default {
-  title: 'Components/Hero Section',
+  title: 'Componentes/Hero Section',
   component: 'tl-hero-section',
+  tags: ['autodocs'],
   parameters: {
     docs: {
       description: {

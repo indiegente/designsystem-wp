@@ -8,7 +8,8 @@
     "build": "vite build",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "wp:generate": "node scripts/generate-wp-templates.js"
+    "wp:generate": "node scripts/generate-wp-templates.js",
+    "wp:validate": "node scripts/validate-wp-theme.js"
   },
   "keywords": [],
   "author": "",
