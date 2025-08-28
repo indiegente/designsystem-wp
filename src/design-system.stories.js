@@ -47,7 +47,7 @@ export const Overview = () => `
     <h3 style="margin-bottom: 1rem;">📚 Navegación</h3>
     <ul style="margin: 0; padding-left: 1.5rem;">
       <li><strong>Design Tokens</strong> - Colores, tipografías y spacing</li>
-      <li><strong>Componentes</strong> - Hero Section, Course Card, etc.</li>
+      <li><strong>Componentes</strong> - Hero Section, Course Card, Testimonials, etc.</li>
       <li><strong>Documentación</strong> - Guías de uso y implementación</li>
     </ul>
   </div>

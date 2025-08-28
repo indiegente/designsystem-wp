@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const ComponentConverter = require('./component-converter');
 const TemplateBuilder = require('./template-builder');
 const AssetManager = require('./asset-manager');
@@ -20,10 +22,22 @@ class WordPressGenerator {
     this.validator = new GenerationValidator(this.config);
   }
 
+  cleanOutputDirectory() {
+    const themeDir = path.join(this.config.outputDir, this.config.themeName);
+    
+    if (fs.existsSync(themeDir)) {
+      console.log('🧹 Limpiando directorio de salida anterior...');
+      fs.rmSync(themeDir, { recursive: true, force: true });
+    }
+  }
+
   async generate() {
     console.log('🚀 Iniciando generación de tema WordPress...');
     
     try {
+      // 0. Limpiar directorio de salida anterior
+      this.cleanOutputDirectory();
+      
       // 1. Crear estructura del tema
       this.themeStructure.create();
       

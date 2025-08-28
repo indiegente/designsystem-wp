@@ -1,0 +1,121 @@
+{
+  "page-carreras": {
+    "title": "Carreras",
+    "description": "Explora nuestras carreras técnicas y programas especializados",
+    "components": [
+      {
+        "name": "hero-section",
+        "props": {
+          "title": "Nuestras Carreras",
+          "subtitle": "Descubre tu potencial creativo con nuestras carreras técnicas",
+          "ctaText": "Explorar carreras",
+          "backgroundImage": ""
+        },
+        "seo": {
+          "title": "Carreras Técnicas | Toulouse Lautrec",
+          "description": "Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.",
+          "keywords": "carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec",
+          "ogImage": "",
+          "canonical": "/carreras"
+        },
+        "analytics": {
+          "pageView": "page_view_carreras",
+          "events": [
+            {
+              "name": "hero_cta_click",
+              "category": "engagement",
+              "action": "click",
+              "label": "hero_cta_carreras"
+            },
+            {
+              "name": "course_card_click",
+              "category": "engagement", 
+              "action": "click",
+              "label": "course_card_view"
+            }
+          ]
+        }
+      },
+      {
+        "name": "course-card",
+        "props": {
+          "title": "",
+          "description": "",
+          "image": "",
+          "link": "",
+          "linkText": "Ver carrera"
+        },
+        "dataSource": {
+          "type": "wordpress_posts",
+          "postType": "carrera",
+          "query": {
+            "numberposts": -1,
+            "post_status": "publish"
+          },
+          "mapping": {
+            "title": "post_title",
+            "description": "post_excerpt",
+            "image": "post_thumbnail_url",
+            "link": "post_permalink"
+          }
+        }
+      },
+      {
+        "name": "testimonials",
+        "props": {
+          "title": "Lo que dicen nuestros estudiantes",
+          "subtitle": "Testimonios de éxito de nuestros egresados"
+        },
+        "dataSource": {
+          "type": "wordpress_posts",
+          "postType": "testimonio",
+          "query": {
+            "numberposts": 6,
+            "post_status": "publish"
+          },
+          "mapping": {
+            "name": "post_title",
+            "role": "post_excerpt",
+            "content": "post_content",
+            "rating": "meta_rating",
+            "avatar": "meta_avatar",
+            "course": "meta_course"
+          }
+        }
+      }
+    ]
+  },
+  "page-contacto": {
+    "title": "Contacto",
+    "description": "Ponte en contacto con nosotros",
+    "components": [
+      {
+        "name": "hero-section",
+        "props": {
+          "title": "Contáctanos",
+          "subtitle": "Estamos aquí para ayudarte en tu camino creativo",
+          "ctaText": "Enviar mensaje",
+          "backgroundImage": ""
+        },
+        "seo": {
+          "title": "Contacto | Toulouse Lautrec",
+          "description": "Ponte en contacto con nosotros. Estamos aquí para ayudarte en tu camino creativo.",
+          "keywords": "contacto, Toulouse Lautrec, información, ayuda",
+          "ogImage": "",
+          "canonical": "/contacto"
+        },
+        "analytics": {
+          "pageView": "page_view_contacto",
+          "events": [
+            {
+              "name": "contact_form_submit",
+              "category": "conversion",
+              "action": "submit",
+              "label": "contact_form"
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

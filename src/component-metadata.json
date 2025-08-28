@@ -1,0 +1,74 @@
+{
+  "hero-section": {
+    "type": "static",
+    "phpFunction": "render_hero_section",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "" },
+      { "name": "subtitle", "type": "string", "default": "" },
+      { "name": "cta_text", "type": "string", "default": "" },
+      { "name": "background_image", "type": "string", "default": "" }
+    ],
+    "template": "hero-section"
+  },
+  "course-card": {
+    "type": "iterative",
+    "phpFunction": "render_course_card",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "" },
+      { "name": "description", "type": "string", "default": "" },
+      { "name": "image", "type": "string", "default": "" },
+      { "name": "link", "type": "string", "default": "" },
+      { "name": "link_text", "type": "string", "default": "Ver más" }
+    ],
+    "template": "course-card",
+    "iteration": {
+      "mode": "individual",
+      "renderPerItem": true
+    }
+  },
+  "testimonials": {
+    "type": "aggregated",
+    "phpFunction": "render_testimonials",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "" },
+      { "name": "subtitle", "type": "string", "default": "" },
+      { "name": "testimonials", "type": "array", "default": "[]" }
+    ],
+    "template": "testimonials",
+    "aggregation": {
+      "mode": "collect",
+      "dataStructure": {
+        "name": "post_title",
+        "role": "post_excerpt", 
+        "content": "post_content",
+        "rating": "meta_rating",
+        "avatar": "meta_avatar",
+        "course": "meta_course"
+      },
+      "defaultValues": {
+        "rating": 5
+      }
+    }
+  },
+  "feature-grid": {
+    "type": "aggregated",
+    "phpFunction": "render_feature_grid",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "" },
+      { "name": "subtitle", "type": "string", "default": "" },
+      { "name": "features", "type": "array", "default": "[]" }
+    ],
+    "template": "feature-grid",
+    "aggregation": {
+      "mode": "collect",
+      "dataStructure": {
+        "title": "post_title",
+        "description": "post_content",
+        "icon": "meta_icon"
+      },
+      "defaultValues": {
+        "icon": "✨"
+      }
+    }
+  }
+}

@@ -1,7 +1,48 @@
+const fs = require('fs');
+const path = require('path');
+const DynamicPageTemplates = require('./dynamic-page-templates');
+
 class WpTemplates {
-  generate(templateName) {
-    const templates = {
-      'header': `<!DOCTYPE html>
+  constructor(config) {
+    this.config = config;
+    this.components = this.getAvailableComponents();
+    this.dynamicTemplates = new DynamicPageTemplates(config);
+  }
+
+  getAvailableComponents() {
+    const componentsDir = path.join(this.config.srcDir, 'components');
+    if (!fs.existsSync(componentsDir)) return [];
+    
+    return fs.readdirSync(componentsDir)
+      .filter(item => fs.statSync(path.join(componentsDir, item)).isDirectory())
+      .map(component => component.replace('-', '_'));
+  }
+
+  generateTemplateName(templateName) {
+    return templateName
+      .replace('page-', '')
+      .replace(/-/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  generateBasicTemplate(templateName) {
+    return `<?php
+/*
+Template Name: ${this.generateTemplateName(templateName)}
+*/
+get_header();
+?>
+
+<main class="${templateName}-content">
+    <h1><?php the_title(); ?></h1>
+    <?php the_content(); ?>
+</main>
+
+<?php get_footer(); ?>`;
+  }
+
+  generateHeaderTemplate() {
+    return `<!DOCTYPE html>
 <html <?php language_attributes(); ?>>
 <head>
     <meta charset="<?php bloginfo('charset'); ?>">
@@ -27,9 +68,11 @@ class WpTemplates {
             ?>
         </nav>
     </div>
-</header>`,
+</header>`;
+  }
 
-      'footer': `<footer class="site-footer">
+  generateFooterTemplate() {
+    return `<footer class="site-footer">
     <div class="container">
         <p>&copy; <?php echo date('Y'); ?> <?php bloginfo('name'); ?>. Todos los derechos reservados.</p>
         
@@ -47,9 +90,33 @@ class WpTemplates {
 
 <?php wp_footer(); ?>
 </body>
-</html>`,
+</html>`;
+  }
 
-      '404': `<?php
+  generateFrontPageTemplate() {
+    const componentIncludes = this.components
+      .map(component => `require_once get_template_directory() . '/components/${component.replace('_', '-')}/${component.replace('_', '-')}.php';`)
+      .join('\n');
+
+    return `<?php
+get_header();
+
+// Incluir componentes disponibles
+${componentIncludes}
+
+// Aquí puedes agregar la lógica específica de tu página de inicio
+// usando los componentes disponibles: ${this.components.join(', ')}
+?>
+
+<main class="home-content">
+    <!-- Contenido dinámico basado en el design system -->
+</main>
+
+<?php get_footer(); ?>`;
+  }
+
+  generateErrorTemplate() {
+    return `<?php
 get_header();
 ?>
 
@@ -68,9 +135,11 @@ get_header();
     </div>
 </main>
 
-<?php get_footer(); ?>`,
+<?php get_footer(); ?>`;
+  }
 
-      'search': `<?php
+  generateSearchTemplate() {
+    return `<?php
 get_header();
 ?>
 
@@ -96,78 +165,31 @@ get_header();
     </div>
 </main>
 
-<?php get_footer(); ?>`,
+<?php get_footer(); ?>`;
+  }
 
-      'front-page': `<?php
-get_header();
-
-// Incluir componentes
-require_once get_template_directory() . '/components/hero-section/hero-section.php';
-require_once get_template_directory() . '/components/course-card/course-card.php';
-
-// Hero principal
-render_hero_section(
-    get_field('hero_title') ?: 'Descubre tu potencial creativo',
-    get_field('hero_subtitle') ?: 'Carreras técnicas y programas especializados',
-    get_field('hero_image') ?: '',
-    get_field('hero_cta_text') ?: 'Explorar carreras',
-    get_field('hero_cta_url') ?: '/carreras'
-);
-?>
-
-<main class="home-content">
-    <!-- Contenido adicional del home -->
-</main>
-
-<?php get_footer(); ?>`,
-
-      'page-carreras': `<?php
-/*
-Template Name: Carreras
-*/
-get_header();
-
-require_once get_template_directory() . '/components/course-card/course-card.php';
-
-$carreras = get_posts(array(
-    'post_type' => 'carrera',
-    'numberposts' => -1,
-    'post_status' => 'publish'
-));
-?>
-
-<div class="carreras-container">
-    <h1><?php the_title(); ?></h1>
-    
-    <div class="carreras-grid">
-        <?php foreach ($carreras as $carrera): ?>
-            <?php
-            render_course_card(
-                get_the_title($carrera),
-                get_the_excerpt($carrera),
-                get_the_post_thumbnail_url($carrera, 'medium'),
-                get_permalink($carrera),
-                'Ver carrera'
-            );
-            ?>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<?php get_footer(); ?>`
+  generate(templateName) {
+    // Templates básicos de WordPress
+    const basicTemplates = {
+      'header': this.generateHeaderTemplate(),
+      'footer': this.generateFooterTemplate(),
+      '404': this.generateErrorTemplate(),
+      'search': this.generateSearchTemplate(),
+      'front-page': this.generateFrontPageTemplate()
     };
 
-    return templates[templateName] || `<?php
-/* Template: ${templateName} */
-get_header();
-?>
+    // Si es un template básico, retornarlo
+    if (basicTemplates[templateName]) {
+      return basicTemplates[templateName];
+    }
 
-<main class="${templateName}-content">
-    <h1><?php the_title(); ?></h1>
-    <?php the_content(); ?>
-</main>
+    // Para templates de página, usar el generador dinámico
+    if (templateName.startsWith('page-')) {
+      return this.dynamicTemplates.generate(templateName);
+    }
 
-<?php get_footer(); ?>`;
+    // Template genérico para cualquier otro caso
+    return this.generateBasicTemplate(templateName);
   }
 }
 

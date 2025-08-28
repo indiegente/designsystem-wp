@@ -6,7 +6,7 @@ const FunctionsTemplate = require('./templates/functions-template');
 class TemplateBuilder {
   constructor(config) {
     this.config = config;
-    this.wpTemplates = new WpTemplates();
+    this.wpTemplates = new WpTemplates(config);
     this.functionsTemplate = new FunctionsTemplate();
   }
 

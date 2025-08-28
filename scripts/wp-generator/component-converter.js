@@ -5,7 +5,7 @@ const PhpComponentTemplate = require('./templates/php-components');
 class ComponentConverter {
   constructor(config) {
     this.config = config;
-    this.phpTemplate = new PhpComponentTemplate();
+    this.phpTemplate = new PhpComponentTemplate(config);
   }
 
   async convertAll() {
@@ -59,6 +59,7 @@ class ComponentConverter {
     const propsString = propMatches[1];
     const props = [];
     
+    // Buscar propiedades con type definido
     const propRegex = /(\w+):\s*\{\s*type:\s*(\w+)/g;
     let match;
     
@@ -67,6 +68,17 @@ class ComponentConverter {
         name: match[1],
         type: match[2].toLowerCase()
       });
+    }
+    
+    // Si no se encontraron propiedades con type, buscar propiedades simples
+    if (props.length === 0) {
+      const simplePropRegex = /(\w+):\s*\{/g;
+      while ((match = simplePropRegex.exec(propsString)) !== null) {
+        props.push({
+          name: match[1],
+          type: 'string'
+        });
+      }
     }
     
     return props;
