@@ -452,182 +452,557 @@ Navega a `http://localhost:6006` y verifica que:
 
 **💡 Ventaja del nuevo sistema**: Sin archivos `.mocks.js`, habrías tenido datos genéricos como "Título del Componente" y arrays vacíos. Con mocks personalizados, tienes datos específicos del dominio que demuestran mejor el propósito real del componente.
 
-### Paso 3: Configurar Metadata
+### Paso 3: Configurar Metadata - Guía Detallada de Atributos
 
-#### 3.1 Agregar componente a metadata
+La metadata es el corazón del sistema de generación automática. Define cómo cada componente Lit se convierte en PHP, qué datos consume, y cómo se integra con WordPress.
+
+#### 3.1 Estructura General del Metadata
+
+El archivo `src/component-metadata.json` contiene cuatro secciones principales:
 
 ```json
-// src/component-metadata.json
+{
+  "postTypes": { /* Tipos de posts personalizados WordPress */ },
+  "templates": { /* Plantillas de página PHP */ },
+  "componentMapping": { /* Mapeo componente → post_type */ },
+  "[component-name]": { /* Configuración por componente */ }
+}
+```
+
+---
+
+#### 3.2 Sección PostTypes - Tipos de Contenido WordPress
+
+Define los **Custom Post Types** que alimentarán tus componentes con datos reales:
+
+| Atributo | Tipo | Obligatorio | Descripción | Ejemplo |
+|----------|------|-------------|-------------|---------|
+| `labels.name` | string | ✅ | Nombre plural en WordPress admin | "Carreras", "Productos" |
+| `labels.singular_name` | string | ✅ | Nombre singular en WordPress admin | "Carrera", "Producto" |
+| `public` | boolean | ❌ | Si aparece en front-end y admin | `true` |
+| `supports` | array | ❌ | Funcionalidades WordPress | `["title", "editor", "thumbnail"]` |
+| `show_in_rest` | boolean | ❌ | API REST habilitada | `true` |
+
+**Ejemplo práctico:**
+```json
+"postTypes": {
+  "carrera": {
+    "labels": { "name": "Carreras", "singular_name": "Carrera" },
+    "public": true,
+    "supports": ["title", "editor", "thumbnail", "excerpt"],
+    "show_in_rest": true
+  }
+}
+```
+
+**🔄 Lógica de uso:** El sistema usa `componentMapping` para conectar componentes con postTypes. Si tu componente `course-card` está mapeado a `carrera`, automáticamente consumirá datos del post_type `carrera`.
+
+---
+
+#### 3.3 Sección Templates - Páginas WordPress
+
+Define las **plantillas PHP** que se generarán automáticamente:
+
+| Atributo | Tipo | Obligatorio | Descripción |
+|----------|------|-------------|-------------|
+| `file` | string | ✅ | Nombre del archivo PHP generado |
+| `title` | string | ✅ | Título para WordPress admin |
+| `description` | string | ❌ | Descripción de la plantilla |
+
+**Ejemplo:**
+```json
+"templates": {
+  "page-carreras": {
+    "file": "page-carreras.php",
+    "title": "Carreras",
+    "description": "Listado de todas las carreras disponibles"
+  }
+}
+```
+
+---
+
+#### 3.4 Sección ComponentMapping - Conexión Componente ↔ Datos
+
+Conecta componentes con sus fuentes de datos:
+
+```json
+"componentMapping": {
+  "course-card": "carrera",     // course-card consume posts del tipo "carrera"
+  "product-card": "producto",   // product-card consume posts del tipo "producto"
+  "testimonials": "testimonio"  // testimonials consume posts del tipo "testimonio"
+}
+```
+
+**🔄 Lógica:** Si no hay mapping, el componente se considera estático y usará valores por defecto.
+
+---
+
+#### 3.5 Configuración por Componente - Los Tipos Principales
+
+Cada componente tiene una configuración detallada. Hay **4 tipos principales:**
+
+##### **Tipo 1: STATIC** - Componentes con datos fijos
+
+Para componentes como heroes, headers, footers que no cambian dinámicamente.
+
+```json
+"hero-section": {
+  "type": "static",
+  "phpFunction": "render_hero_section",
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "subtitle", "type": "string", "default": "" }
+  ],
+  "template": "hero-section"
+}
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `type: "static"` | No consume datos WordPress, usa valores fijos |
+| `phpFunction` | Nombre de la función PHP generada |
+| `parameters` | Array de propiedades del componente Lit |
+| `template` | Nombre del template (sin extensión) |
+
+##### **Tipo 2: ITERATIVE** - Un componente por cada post
+
+Para cards, items que se repiten individualmente.
+
+```json
+"product-card": {
+  "type": "iterative",
+  "phpFunction": "render_product_card", 
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "price", "type": "string", "default": "" },
+    { "name": "featured", "type": "boolean", "default": false }
+  ],
+  "template": "product-card",
+  "iteration": {
+    "mode": "individual",
+    "renderPerItem": true
+  }
+}
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `iteration.mode: "individual"` | Se crea una instancia por cada post |
+| `iteration.renderPerItem: true` | Cada post genera su propio HTML |
+
+**🔄 Mapeo automático de datos:**
+- `title` (Lit) ← `post_title` (WordPress)  
+- `description` (Lit) ← `post_content` (WordPress)
+- `image` (Lit) ← `thumbnail` (WordPress)
+- `featured` (Lit) ← `meta_featured` (WordPress meta field)
+
+##### **Tipo 3: AGGREGATED** - Un componente con array de datos
+
+Para componentes que muestran múltiples posts en una sola instancia.
+
+```json
+"testimonials": {
+  "type": "aggregated",
+  "phpFunction": "render_testimonials",
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "testimonials", "type": "array", "default": "[]" }
+  ],
+  "template": "testimonials",
+  "aggregation": {
+    "mode": "collect",
+    "dataStructure": {
+      "name": "post_title",
+      "role": "post_excerpt",
+      "content": "post_content", 
+      "rating": "meta_rating",
+      "avatar": "meta_avatar"
+    },
+    "defaultValues": {
+      "rating": 5
+    }
+  }
+}
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `aggregation.mode: "collect"` | Recolecta múltiples posts en un array |
+| `aggregation.dataStructure` | Mapeo entre campos Lit y WordPress |
+| `aggregation.defaultValues` | Valores por defecto si faltan datos |
+
+**🔄 Ejemplo de resultado:**
+```php
+// WordPress genera automáticamente:
+$testimonials = [
+  ["name" => "Juan Pérez", "role" => "Estudiante", "rating" => 5],
+  ["name" => "María García", "role" => "Graduada", "rating" => 4]
+];
+render_testimonials("Testimonios", "", $testimonials);
+```
+
+##### **Tipo 4: INTERACTIVE** - Componentes con estado JavaScript
+
+Para galerías, carruseles, componentes que requieren interactividad.
+
+```json
+"interactive-gallery": {
+  "type": "interactive",
+  "phpFunction": "render_interactive_gallery",
+  "parameters": [
+    { "name": "images", "type": "array", "default": "[]" },
+    { "name": "autoPlay", "type": "boolean", "default": "true" }
+  ],
+  "template": "interactive-gallery",
+  "interaction": {
+    "mode": "stateful",
+    "events": ["image-changed", "autoplay-toggled"],
+    "stateManagement": true
+  }
+}
+```
+
+| Atributo | Descripción |
+|----------|-------------|
+| `interaction.mode: "stateful"` | Mantiene estado JavaScript |
+| `interaction.events` | Eventos que el componente puede disparar |
+| `interaction.stateManagement: true` | Requiere JavaScript para funcionar |
+
+---
+
+#### 3.6 Configuración de Parámetros - Mapeo Lit ↔ PHP
+
+Cada parámetro en el array `parameters` debe corresponder exactamente a una **property** del componente Lit:
+
+**En tu componente Lit:**
+```javascript
+class ProductCard extends LitElement {
+  static properties = {
+    title: { type: String },
+    price: { type: String }, 
+    featured: { type: Boolean },
+    category: { type: String }
+  };
+}
+```
+
+**En el metadata:**
+```json
+"parameters": [
+  { "name": "title", "type": "string", "default": "" },
+  { "name": "price", "type": "string", "default": "" },
+  { "name": "featured", "type": "boolean", "default": false },
+  { "name": "category", "type": "string", "default": "" }
+]
+```
+
+| Lit Type | Metadata Type | PHP Result |
+|----------|---------------|------------|
+| `String` | `"string"` | `"texto"` |
+| `Boolean` | `"boolean"` | `true/false` |
+| `Array` | `"array"` | `[]` o JSON string |
+| `Number` | `"number"` | `123` |
+| `Object` | `"object"` | `{}` o JSON string |
+
+---
+
+#### 3.7 Ejemplo Completo de Configuración
+
+```json
 {
   "postTypes": {
     "carrera": {
-      "labels": {
-        "name": "Carreras",
-        "singular_name": "Carrera"
-      },
+      "labels": { "name": "Carreras", "singular_name": "Carrera" },
       "public": true,
       "supports": ["title", "editor", "thumbnail", "excerpt"]
-    },
-    "producto": {
-      "labels": {
-        "name": "Productos",
-        "singular_name": "Producto"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"],
-      "show_in_rest": true
-    },
-    "testimonio": {
-      "labels": {
-        "name": "Testimonios",
-        "singular_name": "Testimonio"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"],
-      "show_in_rest": true
     }
   },
   "templates": {
     "page-carreras": {
-      "file": "page-carreras.php",
-      "title": "Carreras",
-      "description": "Explora nuestras carreras técnicas y programas especializados"
-    },
-    "page-productos": {
-      "file": "page-productos.php",
-      "title": "Productos y Servicios",
-      "description": "Descubre nuestros productos y servicios especializados"
-    },
-    "page-contacto": {
-      "file": "page-contacto.php",
-      "title": "Contacto",
-      "description": "Ponte en contacto con nosotros"
-    },
-    "single-producto": {
-      "file": "single-producto.php",
-      "title": "Producto",
-      "description": "Detalle del producto"
+      "file": "page-carreras.php", 
+      "title": "Carreras"
     }
   },
   "componentMapping": {
-    "course-card": "carrera",
-    "product-card": "producto",
-    "testimonials": "testimonio"
-  },
-  "hero-section": {
-    "type": "static",
-    "phpFunction": "render_hero_section",
-    "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "cta_text", "type": "string", "default": "" },
-      { "name": "background_image", "type": "string", "default": "" }
-    ],
-    "template": "hero-section"
-  },
-  "product-card": {
-    "type": "iterative",
-    "phpFunction": "render_product_card",
-    "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "description", "type": "string", "default": "" },
-      { "name": "price", "type": "string", "default": "" },
-      { "name": "image", "type": "string", "default": "" },
-      { "name": "category", "type": "string", "default": "" },
-      { "name": "featured", "type": "boolean", "default": false },
-      { "name": "link", "type": "string", "default": "" },
-      { "name": "link_text", "type": "string", "default": "Ver más" }
-    ],
-    "template": "product-card",
-    "iteration": {
-      "mode": "individual",
-      "renderPerItem": true
-    }
+    "course-card": "carrera"
   },
   "course-card": {
     "type": "iterative",
     "phpFunction": "render_course_card",
     "parameters": [
       { "name": "title", "type": "string", "default": "" },
-      { "name": "description", "type": "string", "default": "" },
-      { "name": "image", "type": "string", "default": "" },
-      { "name": "link", "type": "string", "default": "" },
-      { "name": "link_text", "type": "string", "default": "Ver más" }
+      { "name": "description", "type": "string", "default": "" }
     ],
     "template": "course-card",
     "iteration": {
       "mode": "individual",
       "renderPerItem": true
     }
-  },
-  "testimonials": {
-    "type": "aggregated",
-    "phpFunction": "render_testimonials",
-    "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "testimonials", "type": "array", "default": "[]" }
-    ],
-    "template": "testimonials",
-    "aggregation": {
-      "mode": "collect",
-      "dataStructure": {
-        "name": "post_title",
-        "role": "post_excerpt", 
-        "content": "post_content",
-        "rating": "meta_rating",
-        "avatar": "meta_avatar",
-        "course": "meta_course"
-      },
-      "defaultValues": {
-        "rating": 5
-      }
-    }
-  },
-  "feature-grid": {
-    "type": "aggregated",
-    "phpFunction": "render_feature_grid",
-    "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "features", "type": "array", "default": "[]" }
-    ],
-    "template": "feature-grid",
-    "aggregation": {
-      "mode": "collect",
-      "dataStructure": {
-        "title": "post_title",
-        "description": "post_content",
-        "icon": "meta_icon"
-      },
-      "defaultValues": {
-        "icon": "✨"
-      }
-    }
-  },
-  "interactive-gallery": {
-    "type": "interactive",
-    "phpFunction": "render_interactive_gallery",
-    "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "images", "type": "array", "default": "[]" },
-      { "name": "autoPlay", "type": "boolean", "default": "true" },
-      { "name": "showThumbnails", "type": "boolean", "default": "true" }
-    ],
-    "template": "interactive-gallery",
-    "interaction": {
-      "mode": "stateful",
-      "events": [
-        "image-changed",
-        "autoplay-toggled", 
-        "lightbox-open"
-      ],
-      "stateManagement": true
+  }
+}
+```
+
+**🎯 Resultado automático:**
+1. ✅ Se crea post_type `carrera` en WordPress
+2. ✅ Se genera `page-carreras.php` 
+3. ✅ Se crea función `render_course_card()` 
+4. ✅ Los posts de tipo `carrera` alimentan automáticamente `course-card`
+
+---
+
+#### 3.8 Ejemplos Prácticos por Tipo de Componente
+
+##### 📄 **Componente STATIC** - Hero Section
+
+**Caso de uso:** Header principal de página, no cambia con datos WordPress.
+
+**Componente Lit:**
+```javascript
+// src/components/hero-section/hero-section.js
+class HeroSection extends LitElement {
+  static properties = {
+    title: { type: String },
+    subtitle: { type: String },
+    ctaText: { type: String },
+    backgroundImage: { type: String }
+  };
+}
+```
+
+**Metadata correspondiente:**
+```json
+"hero-section": {
+  "type": "static",
+  "phpFunction": "render_hero_section",
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "subtitle", "type": "string", "default": "" },
+    { "name": "ctaText", "type": "string", "default": "Conocer más" },
+    { "name": "backgroundImage", "type": "string", "default": "" }
+  ],
+  "template": "hero-section"
+}
+```
+
+**📤 PHP generado automáticamente:**
+```php
+function render_hero_section($title = '', $subtitle = '', $ctaText = 'Conocer más', $backgroundImage = '') {
+    ?>
+    <div class="hero-section">
+        <h1><?php echo esc_html($title); ?></h1>
+        <p><?php echo esc_html($subtitle); ?></p>
+        <a href="#" class="cta-button"><?php echo esc_html($ctaText); ?></a>
+    </div>
+    <?php
+}
+```
+
+---
+
+##### 🔄 **Componente ITERATIVE** - Product Card
+
+**Caso de uso:** Cards que se repiten para cada producto de la base de datos.
+
+**Componente Lit:**
+```javascript
+// src/components/product-card/product-card.js
+class ProductCard extends LitElement {
+  static properties = {
+    title: { type: String },
+    price: { type: String },
+    category: { type: String },
+    featured: { type: Boolean },
+    image: { type: String }
+  };
+}
+```
+
+**Metadata correspondiente:**
+```json
+"product-card": {
+  "type": "iterative", 
+  "phpFunction": "render_product_card",
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "price", "type": "string", "default": "" },
+    { "name": "category", "type": "string", "default": "" },
+    { "name": "featured", "type": "boolean", "default": false },
+    { "name": "image", "type": "string", "default": "" }
+  ],
+  "template": "product-card",
+  "iteration": {
+    "mode": "individual",
+    "renderPerItem": true
+  }
+}
+```
+
+**🎯 Mapeo automático de datos:**
+- `title` ← `post_title`
+- `price` ← `meta_precio` (custom field) 
+- `category` ← `taxonomy_categoria`
+- `featured` ← `meta_destacado` (custom field)
+- `image` ← `post_thumbnail_url`
+
+**📤 PHP generado automáticamente:**
+```php
+// En la página PHP se genera automáticamente:
+$productos = get_posts(['post_type' => 'producto', 'numberposts' => -1]);
+foreach ($productos as $producto) {
+    $precio = get_post_meta($producto->ID, 'precio', true);
+    $destacado = (bool)get_post_meta($producto->ID, 'destacado', true);
+    $imagen = get_the_post_thumbnail_url($producto->ID);
+    
+    render_product_card(
+        $producto->post_title,
+        $precio,
+        $categoria,
+        $destacado, 
+        $imagen
+    );
+}
+```
+
+---
+
+##### 📚 **Componente AGGREGATED** - Testimonials
+
+**Caso de uso:** Un solo componente que muestra múltiples testimonios en array.
+
+**Componente Lit:**
+```javascript
+// src/components/testimonials/testimonials.js
+class Testimonials extends LitElement {
+  static properties = {
+    title: { type: String },
+    testimonials: { type: Array }
+  };
+}
+```
+
+**Metadata correspondiente:**
+```json
+"testimonials": {
+  "type": "aggregated",
+  "phpFunction": "render_testimonials", 
+  "parameters": [
+    { "name": "title", "type": "string", "default": "" },
+    { "name": "testimonials", "type": "array", "default": "[]" }
+  ],
+  "template": "testimonials",
+  "aggregation": {
+    "mode": "collect",
+    "dataStructure": {
+      "name": "post_title",
+      "role": "post_excerpt",
+      "content": "post_content",
+      "rating": "meta_rating",
+      "course": "meta_course"
+    },
+    "defaultValues": {
+      "rating": 5
     }
   }
 }
 ```
+
+**📤 PHP generado automáticamente:**
+```php
+// El sistema recolecta automáticamente:
+$testimonials_posts = get_posts(['post_type' => 'testimonio', 'numberposts' => 6]);
+$testimonials = [];
+
+foreach ($testimonials_posts as $post) {
+    $testimonials[] = [
+        'name' => $post->post_title,
+        'role' => $post->post_excerpt,
+        'content' => $post->post_content,
+        'rating' => get_post_meta($post->ID, 'rating', true) ?: 5,
+        'course' => get_post_meta($post->ID, 'course', true)
+    ];
+}
+
+render_testimonials("Lo que dicen nuestros estudiantes", $testimonials);
+```
+
+---
+
+##### 🖼️ **Componente INTERACTIVE** - Gallery
+
+**Caso de uso:** Galería que requiere JavaScript para interactividad.
+
+**Componente Lit:**
+```javascript
+// src/components/interactive-gallery/interactive-gallery.js
+class InteractiveGallery extends LitElement {
+  static properties = {
+    images: { type: Array },
+    autoPlay: { type: Boolean },
+    showThumbnails: { type: Boolean }
+  };
+}
+```
+
+**Metadata correspondiente:**
+```json
+"interactive-gallery": {
+  "type": "interactive",
+  "phpFunction": "render_interactive_gallery",
+  "parameters": [
+    { "name": "images", "type": "array", "default": "[]" },
+    { "name": "autoPlay", "type": "boolean", "default": "true" },
+    { "name": "showThumbnails", "type": "boolean", "default": "true" }
+  ],
+  "template": "interactive-gallery",
+  "interaction": {
+    "mode": "stateful",
+    "events": ["image-changed", "autoplay-toggled"],
+    "stateManagement": true
+  }
+}
+```
+
+**📤 PHP generado automáticamente:**
+```php
+function render_interactive_gallery($images = '[]', $autoPlay = true, $showThumbnails = true) {
+    $images_data = is_string($images) ? json_decode($images, true) : $images;
+    ?>
+    <div class="interactive-gallery" 
+         data-autoplay="<?php echo $autoPlay ? 'true' : 'false'; ?>"
+         data-thumbnails="<?php echo $showThumbnails ? 'true' : 'false'; ?>">
+        <?php foreach ($images_data as $image): ?>
+            <img src="<?php echo esc_url($image['url']); ?>" 
+                 alt="<?php echo esc_attr($image['alt']); ?>">
+        <?php endforeach; ?>
+    </div>
+    <script>
+        // Se incluye automáticamente el JavaScript para interactividad
+        initInteractiveGallery();
+    </script>
+    <?php
+}
+```
+
+---
+
+#### 3.9 Mapeo Avanzado - Properties de Lit → Metadata
+
+**🎯 Reglas de conversión automática:**
+
+| Lit Property | Metadata Parameter | PHP Variable | WordPress Source |
+|--------------|-------------------|--------------|------------------|
+| `title: { type: String }` | `{ "name": "title", "type": "string" }` | `$title` | `post_title` |
+| `featured: { type: Boolean }` | `{ "name": "featured", "type": "boolean" }` | `$featured` | `meta_featured` |
+| `items: { type: Array }` | `{ "name": "items", "type": "array" }` | `$items` | `json_decode(meta_items)` |
+| `price: { type: Number }` | `{ "name": "price", "type": "number" }` | `$price` | `(int)meta_price` |
+
+**💡 Consejos de configuración:**
+
+1. **Nombres consistentes:** Usa el mismo nombre en Lit property y metadata parameter
+2. **Tipos exactos:** `String` → `"string"`, `Boolean` → `"boolean"`, `Array` → `"array"`
+3. **Defaults útiles:** Proporciona defaults realistas, no vacíos
+4. **Custom fields:** Para datos específicos usa `meta_[nombre]` en WordPress
 
 ### Paso 4: Configurar Página WordPress
 
