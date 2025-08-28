@@ -362,25 +362,34 @@ class ToulouseSEOManager {
     }
 }
 
-// Inicializar SEO Manager
-$toulouse_seo = new ToulouseSEOManager();
+// Inicializar SEO Manager con protección de errores
+$toulouse_seo = null;
+try {
+    $toulouse_seo = new ToulouseSEOManager();
+} catch (Exception $e) {
+    error_log('Error inicializando ToulouseSEOManager: ' . $e->getMessage());
+}
 
 // Hook para agregar meta tags
 function toulouse_seo_meta_tags() {
     global $toulouse_seo;
-    echo $toulouse_seo->generateMetaTags();
+    if ($toulouse_seo && method_exists($toulouse_seo, 'generateMetaTags')) {
+        echo $toulouse_seo->generateMetaTags();
+    }
 }
 add_action('wp_head', 'toulouse_seo_meta_tags');
 
 // Hook para agregar JSON-LD
 function toulouse_seo_structured_data() {
     global $toulouse_seo;
-    $structured_data = $toulouse_seo->generateStructuredData();
-    
-    if (!empty($structured_data)) {
-        echo '<script type="application/ld+json">';
-        echo json_encode($structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        echo '</script>';
+    if ($toulouse_seo && method_exists($toulouse_seo, 'generateStructuredData')) {
+        $structured_data = $toulouse_seo->generateStructuredData();
+        
+        if (!empty($structured_data)) {
+            echo '<script type="application/ld+json">';
+            echo json_encode($structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+            echo '</script>';
+        }
     }
 }
 add_action('wp_head', 'toulouse_seo_structured_data');

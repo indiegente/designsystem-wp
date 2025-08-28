@@ -1617,7 +1617,43 @@ wordpress-output/toulouse-lautrec/
 
 ### Paso 7: Validar y Probar
 
-#### 7.1 Validar tema generado
+#### 7.1 Validación Automática de Sintaxis PHP 🔒
+
+El sistema incluye validación automática que se ejecuta durante la generación:
+
+```bash
+# Generación con validación automática integrada
+npm run wp:generate
+```
+
+**Salida esperada con validación exitosa:**
+```
+🚀 Iniciando generación de tema WordPress avanzado...
+🐘 PHP detectado: PHP 8.4.4 (cli)
+✅ Convertido: product-card
+✅ Todos los templates generados correctamente
+🔍 Validando sintaxis PHP...
+
+📊 Reporte de Validación PHP
+══════════════════════════════════════════════════
+📁 Archivos totales: 19
+✅ Archivos válidos: 19  
+❌ Errores encontrados: 0
+📈 Tasa de éxito: 100.0%
+
+🎉 ¡Todos los archivos PHP tienen sintaxis correcta!
+✅ Tema WordPress avanzado generado y validado exitosamente!
+```
+
+#### 7.2 Validación Interactiva de PHP
+
+Para validación más detallada con sugerencias:
+
+```bash
+npm run wp:validate-php
+```
+
+#### 7.3 Validar tema completo
 
 ```bash
 npm run wp:validate
@@ -1684,7 +1720,36 @@ function render_product_card($title = '', $description = '', $price = '', $image
 ?>
 ```
 
-#### 7.3 Probar en WordPress local (opcional)
+#### 7.4 Manejo de Errores de Validación
+
+Si el sistema detecta errores durante la generación:
+
+**Ejemplo de error detectado:**
+```
+❌ Errores de Sintaxis PHP:
+──────────────────────────────────────────────────
+📄 components/product-card/product-card.php
+   └─ Línea 15: syntax error, unexpected identifier "config"
+   └─ Solución: JavaScript keywords en contexto PHP detectado
+
+🧹 Rollback completado. No se dejaron archivos con errores.
+```
+
+**Cómo solucionar:**
+1. El sistema automáticamente limpia archivos con errores
+2. Revisa la extensión o componente que puede estar generando código problemático
+3. Ejecuta nuevamente la generación después de corregir
+
+**Verificar corrección:**
+```bash
+# Regenerar después del fix
+npm run wp:generate
+
+# Validación específica
+npm run wp:validate-php
+```
+
+#### 7.5 Probar en WordPress local (opcional)
 
 Si tienes WordPress local:
 
@@ -1692,7 +1757,7 @@ Si tienes WordPress local:
 # Copiar tema a WordPress
 cp -r wordpress-output/toulouse-lautrec /path/to/wp-content/themes/
 
-# O crear symlink para desarrollo continuo
+# O crear symlink para desarrollo continuo  
 ln -s $(pwd)/wordpress-output/toulouse-lautrec /path/to/wp-content/themes/toulouse-lautrec
 ```
 
@@ -1700,6 +1765,7 @@ ln -s $(pwd)/wordpress-output/toulouse-lautrec /path/to/wp-content/themes/toulou
 2. **Crea posts** del tipo "Producto" 
 3. **Crea página** usando template "Productos"
 4. **Verifica funcionamiento** de wishlist y compare
+5. **Confirma** que no hay errores PHP en WordPress debug.log
 
 ## 🔧 Personalización Avanzada
 

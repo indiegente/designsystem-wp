@@ -2,12 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const WpTemplates = require('./templates/wp-templates');
 const FunctionsTemplate = require('./templates/functions-template');
+const PHPValidator = require('./php-validator');
 
 class TemplateBuilder {
   constructor(config) {
     this.config = config;
     this.wpTemplates = new WpTemplates(config);
     this.functionsTemplate = new FunctionsTemplate(config);
+    this.phpValidator = new PHPValidator(config);
     this.metadata = this.loadMetadata();
   }
 
@@ -19,10 +21,40 @@ class TemplateBuilder {
     return {};
   }
 
+  /**
+   * Escribe archivo PHP con validación automática de sintaxis
+   */
+  writeValidatedPHPFile(filePath, content) {
+    const filename = path.basename(filePath);
+    
+    try {
+      // Validar contenido antes de escribir
+      if (!this.phpValidator.validatePHPContent(content, filename)) {
+        console.error(`❌ Error de sintaxis PHP en ${filename}. No se escribió el archivo.`);
+        return false;
+      }
+      
+      // Escribir archivo si la validación pasó
+      fs.writeFileSync(filePath, content);
+      console.log(`✅ ${filename} generado y validado`);
+      return true;
+      
+    } catch (error) {
+      console.error(`❌ Error escribiendo ${filename}: ${error.message}`);
+      return false;
+    }
+  }
+
   async generateAll() {
-    await this.generateWordPressTemplates();
-    this.generateStyleHeader();
-    this.generateFunctionsFile();
+    try {
+      await this.generateWordPressTemplates();
+      this.generateStyleHeader();
+      this.generateFunctionsFile(); // Este puede lanzar error crítico
+      console.log('✅ Todos los templates generados correctamente');
+    } catch (error) {
+      console.error('❌ Error crítico en generación de templates:', error.message);
+      throw error; // Re-lanzar para que el generador principal lo maneje
+    }
   }
 
   async generateWordPressTemplates() {
@@ -54,7 +86,7 @@ class TemplateBuilder {
         template.file
       );
       
-      fs.writeFileSync(templatePath, templateContent);
+      this.writeValidatedPHPFile(templatePath, templateContent);
     });
 
     await Promise.all(templatePromises);
@@ -89,7 +121,10 @@ Text Domain: toulouse-lautrec
       'functions.php'
     );
     
-    fs.writeFileSync(functionsPath, functionsContent);
+    const success = this.writeValidatedPHPFile(functionsPath, functionsContent);
+    if (!success) {
+      throw new Error('❌ CRÍTICO: functions.php falló validación PHP. Generación detenida.');
+    }
   }
 }
 

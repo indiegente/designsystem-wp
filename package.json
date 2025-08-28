@@ -10,6 +10,7 @@
     "build-storybook": "storybook build",
     "wp:generate": "node scripts/generate-wp-templates.js",
     "wp:validate": "node scripts/validate-wp-theme.js",
+    "wp:validate-php": "node -e \"const PHPValidator = require('./scripts/wp-generator/php-validator'); const v = new PHPValidator({outputDir: './wordpress-output', themeName: 'toulouse-lautrec'}); v.runInteractiveValidation();\"",
     "stories:generate": "node scripts/generate-stories.js",
     "stories:generate:robust": "node scripts/generate-stories-robust.js",
     "stories:test": "node scripts/test-story-generator.js"

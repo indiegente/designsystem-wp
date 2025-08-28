@@ -20,7 +20,7 @@ class PhpComponentTemplate {
     
     // Usar metadata para generar parámetros
     const propsParams = this.generatePhpParameters(componentName) || 
-      props.map(prop => `$${prop.name} = ''`).join(', ');
+      (props || []).map(prop => `$${prop.name} = ''`).join(', ');
     
     return `<?php
 /**
@@ -35,9 +35,7 @@ function ${functionName}(${propsParams}) {
     </div>
     
     <style>
-    .${componentName} {
-        ${cssClasses}
-    }
+    ${cssClasses}
     </style>
     <?php
 }

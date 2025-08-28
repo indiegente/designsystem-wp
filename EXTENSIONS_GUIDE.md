@@ -547,6 +547,105 @@ module.exports = function(config) {
 
 ## 🛠️ Debugging y Testing
 
+### 🔒 Sistema de Validación PHP Integrado
+
+El sistema incluye validación automática de sintaxis PHP para prevenir errores en el entorno local de WordPress.
+
+#### Características del Validador PHP:
+
+- **Validación automática** con `php -l` antes de escribir archivos
+- **Pre-validación** de patrones problemáticos comunes
+- **Rollback automático** si hay errores de validación
+- **Reportes detallados** con información de errores
+- **Validación en tiempo real** durante la generación
+
+#### Ejemplo de uso del validador en extensiones:
+
+```javascript
+module.exports = function(config) {
+  return {
+    name: 'php-validation-aware-extension',
+    
+    hooks: {
+      afterComponentRender: async function(component, context, result) {
+        // El sistema automáticamente validará el resultado PHP
+        // Si hay errores, detendrá la generación y hará rollback
+        
+        result += `
+        <?php
+        // Tu código PHP aquí será validado automáticamente
+        if (function_exists('my_custom_function')) {
+          my_custom_function();
+        }
+        ?>`;
+        
+        return result;
+      }
+    }
+  };
+};
+```
+
+#### Patrones de Error Detectados:
+
+1. **JavaScript en contexto PHP**:
+   - Detecta palabras clave JS como `config`, `document`, `addEventListener`
+   - Previene errores de parsing en IDEs
+
+2. **Comillas no balanceadas**:
+   - Verifica comillas simples y dobles en statements echo
+   - Detecta strings mal formateados
+
+3. **Variables globales sin validación**:
+   - Identifica uso de variables globales sin verificación isset()
+   - Sugiere patrones seguros para prevenir null pointers
+
+4. **Etiquetas PHP incompletas**:
+   - Detecta etiquetas <?php sin cierre ?>
+   - Valida estructura correcta de bloques PHP
+
+#### Configuración del Validador:
+
+```javascript
+// En tu extensión, puedes acceder al validador
+module.exports = function(config) {
+  return {
+    name: 'validation-config-extension',
+    
+    hooks: {
+      beforeComponentRender: async function(component, context) {
+        // El validador está disponible en el contexto
+        if (context.phpValidator) {
+          console.log('✅ Validador PHP disponible');
+          
+          // Validar código PHP personalizado antes de usar
+          const customPhp = '<?php echo "test"; ?>';
+          const isValid = context.phpValidator.validatePHPContent(customPhp, 'test.php');
+          
+          if (!isValid) {
+            console.error('❌ Código PHP personalizado no es válido');
+            return;
+          }
+        }
+      }
+    }
+  };
+};
+```
+
+#### Comandos de Validación:
+
+```bash
+# Validar tema completo
+npm run wp:validate-php
+
+# Generar con validación completa
+npm run wp:generate
+
+# Ver reporte de validación
+cat wordpress-output/php-validation-report.json
+```
+
 ### Logs de Debugging
 
 ```javascript
@@ -559,11 +658,13 @@ module.exports = function(config) {
         console.log('🔍 Debug - Componente:', component.name);
         console.log('🔍 Debug - Props:', component.props);
         console.log('🔍 Debug - DataSource:', component.dataSource);
+        console.log('🔍 Debug - Validador PHP disponible:', !!context.phpValidator);
       },
       
       afterComponentRender: async function(component, context, result) {
         console.log('🔍 Debug - Resultado generado para:', component.name);
         console.log('🔍 Debug - Longitud del resultado:', result.length);
+        console.log('🔍 Debug - Contiene PHP:', result.includes('<?php'));
         
         return result;
       }
@@ -588,6 +689,19 @@ module.exports = function(config) {
             console.error('❌ Test falló: No se encontró testimonial-card');
           } else {
             console.log('✅ Test pasó: testimonial-card encontrado');
+          }
+        }
+        
+        // Test de validación PHP automática
+        if (result.includes('<?php')) {
+          console.log('✅ Test pasó: Código PHP detectado, será validado automáticamente');
+          
+          // Verificar sintaxis PHP básica
+          const hasOpeningTag = result.includes('<?php');
+          const hasClosingTag = result.includes('?>');
+          
+          if (hasOpeningTag && !hasClosingTag) {
+            console.warn('⚠️ Advertencia: PHP abierto sin cierre explícito (puede ser válido)');
           }
         }
         
@@ -616,6 +730,11 @@ module.exports = function(config) {
         if (component.dataSource && !component.dataSource.type) {
           console.warn('⚠️ DataSource sin tipo definido para:', component.name);
         }
+        
+        // Verificar que el validador PHP está disponible
+        if (!context.phpValidator) {
+          console.warn('⚠️ Validador PHP no disponible en el contexto');
+        }
       },
       
       afterComponentRender: async function(component, context, result) {
@@ -624,8 +743,24 @@ module.exports = function(config) {
           throw new Error(`Resultado vacío para componente: ${component.name}`);
         }
         
-        if (!result.includes('<?php')) {
-          console.warn('⚠️ Resultado no contiene código PHP para:', component.name);
+        if (!result.includes('<?php') && !result.includes('<div')) {
+          console.warn('⚠️ Resultado no contiene código PHP ni HTML para:', component.name);
+        }
+        
+        // Validación específica de PHP si está presente
+        if (result.includes('<?php') && context.phpValidator) {
+          console.log('🔍 Validando PHP generado para:', component.name);
+          
+          // Pre-validación de patrones problemáticos
+          if (result.includes('config') && result.includes('//')) {
+            console.warn('⚠️ Posible conflicto JS/PHP detectado en:', component.name);
+          }
+          
+          // El sistema ya validará automáticamente, pero podemos hacer checks adicionales
+          const hasBalancedTags = (result.match(/<?php/g) || []).length === (result.match(/\?>/g) || []).length;
+          if (!hasBalancedTags) {
+            console.log('ℹ️ Tags PHP no balanceados (puede ser normal):', component.name);
+          }
         }
         
         return result;

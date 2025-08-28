@@ -70,12 +70,22 @@ npm run storybook
 
 ### 2. Generar Tema WordPress
 ```bash
-# Generar y validar automáticamente
+# Generar con validación automática integrada
 npm run wp:generate
 
-# O validar manualmente después
+# Validación específica de PHP (opcional)
+npm run wp:validate-php
+
+# Validación general del tema (opcional)
 npm run wp:validate
 ```
+
+**🔒 Validación Automática de PHP:**
+- ✅ Sintaxis PHP verificada con `php -l`
+- ✅ Patrones problemáticos detectados y corregidos
+- ✅ Variables globales validadas contra null pointers
+- ✅ CSS de Web Components limpiado para WordPress
+- ✅ Rollback automático si hay errores
 
 ### 3. Ver Cambios en WordPress
 Los cambios se reflejan automáticamente gracias al symlink:
@@ -84,6 +94,8 @@ Los cambios se reflejan automáticamente gracias al symlink:
 - ✅ Componentes convertidos
 
 ## ✅ Validación de Compatibilidad
+
+### Validación Completa del Tema
 
 El validador verifica que el tema sea compatible con WordPress:
 
@@ -95,6 +107,35 @@ El validador verifica que el tema sea compatible con WordPress:
 ✅ Estructura de tema válida
 🏁 Estado final: ✅ VÁLIDO PARA WORDPRESS
 ```
+
+### Validación de Sintaxis PHP
+
+Adicionalmente, se valida la sintaxis PHP de todos los archivos:
+
+```bash
+🔍 Iniciando validación completa de sintaxis PHP...
+🐘 PHP detectado: PHP 8.4.4 (cli)
+📋 Validando archivos principales...
+📄 Validando templates de página...
+🧩 Validando componentes...
+
+📊 Reporte de Validación PHP
+══════════════════════════════════════════════════
+📁 Archivos totales: 19
+✅ Archivos válidos: 19
+❌ Errores encontrados: 0
+📈 Tasa de éxito: 100.0%
+
+🎉 ¡Todos los archivos PHP tienen sintaxis correcta!
+```
+
+### Manejo de Errores
+
+Si se detectan errores, el sistema:
+1. **Detiene la generación** inmediatamente
+2. **Muestra errores detallados** con líneas específicas
+3. **Limpia archivos parciales** automáticamente
+4. **Sugiere soluciones** para cada tipo de error
 
 ## 🚀 Activar Tema en WordPress
 

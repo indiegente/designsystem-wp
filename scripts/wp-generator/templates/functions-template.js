@@ -150,38 +150,26 @@ function toulouse_page_seo_analytics() {
         $config = $seo_config[$page_template];
         
         // Meta tags
-        echo '<title>' . esc_html($config['title']) . '</title>' . "\n";
-        echo '<meta name="description" content="' . esc_attr($config['description']) . '">' . "\n";
-        echo '<meta name="keywords" content="' . esc_attr($config['keywords']) . '">' . "\n";
+        echo '<title>' . esc_html($config['title']) . '</title>';
+        echo '<meta name="description" content="' . esc_attr($config['description']) . '">';
+        echo '<meta name="keywords" content="' . esc_attr($config['keywords']) . '">';
         
         // Open Graph
-        echo '<meta property="og:title" content="' . esc_attr($config['title']) . '">' . "\n";
-        echo '<meta property="og:description" content="' . esc_attr($config['description']) . '">' . "\n";
-        echo '<meta property="og:type" content="website">' . "\n";
-        echo '<meta property="og:url" content="' . esc_url(home_url($config['canonical'])) . '">' . "\n";
+        echo '<meta property="og:title" content="' . esc_attr($config['title']) . '">';
+        echo '<meta property="og:description" content="' . esc_attr($config['description']) . '">';
+        echo '<meta property="og:type" content="website">';
+        echo '<meta property="og:url" content="' . esc_url(home_url($config['canonical'])) . '">';
         
         // Canonical
-        echo '<link rel="canonical" href="' . esc_url(home_url($config['canonical'])) . '">' . "\n";
+        echo '<link rel="canonical" href="' . esc_url(home_url($config['canonical'])) . '">';
         
-        // Analytics
-        echo '<script>' . "\n";
-        echo '// Page View: ' . $config['analytics']['pageView'] . "\n";
-        echo '// gtag(\'config\', \'GA_MEASUREMENT_ID\', {' . "\n";
-        echo '//   \'page_title\': \'' . $config['analytics']['pageView'] . '\',' . "\n";
-        echo '//   \'page_location\': window.location.href' . "\n";
-        echo '// });' . "\n";
-        
-        foreach ($config['analytics']['events'] as $event) {
-            echo '// ' . $event['name'] . "\n";
-            echo 'document.addEventListener(\'DOMContentLoaded\', function() {' . "\n";
-            echo '  // Implementar tracking para ' . $event['name'] . "\n";
-            echo '  // gtag(\'event\', \'' . $event['action'] . '\', {' . "\n";
-            echo '  //   \'event_category\': \'' . $event['category'] . '\',' . "\n";
-            echo '  //   \'event_label\': \'' . $event['label'] . '\'' . "\n";
-            echo '  // });' . "\n";
-            echo '});' . "\n";
-        }
-        echo '</script>' . "\n";
+        // Analytics - JavaScript code
+        echo '<script>';
+        echo 'document.addEventListener("DOMContentLoaded", function() {';
+        echo '  // Add your analytics tracking code here';
+        echo '  // Example: gtag("event", "page_view", { event_category: "engagement" });';
+        echo '});';
+        echo '</script>';
     }
 }
 add_action('wp_head', 'toulouse_page_seo_analytics');

@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const ExtensionManager = require('./extension-manager');
 const PhpComponentTemplate = require('./templates/php-components');
+const PHPValidator = require('./php-validator');
 
 class ComponentGenerator {
   constructor(config) {
@@ -9,6 +10,7 @@ class ComponentGenerator {
     this.metadata = this.loadComponentMetadata();
     this.extensionManager = new ExtensionManager(config);
     this.phpTemplate = new PhpComponentTemplate(config);
+    this.phpValidator = new PHPValidator(config);
   }
 
   loadComponentMetadata() {
@@ -242,8 +244,15 @@ class ComponentGenerator {
     );
     
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, phpComponent);
     
+    // Validar sintaxis PHP antes de escribir
+    const filename = path.basename(outputPath);
+    if (!this.phpValidator.validatePHPContent(phpComponent, filename)) {
+      console.error(`❌ Error de sintaxis PHP en ${componentName}. No se escribió el archivo.`);
+      return false;
+    }
+    
+    fs.writeFileSync(outputPath, phpComponent);
     console.log(`✅ Convertido: ${componentName}`);
   }
 
@@ -290,7 +299,72 @@ class ComponentGenerator {
     const cssMatches = litContent.match(/css`([^`]+)`/s);
     if (!cssMatches) return '';
     
-    return cssMatches[1];
+    const rawCss = cssMatches[1];
+    return this.cleanCssForWordPress(rawCss);
+  }
+
+  cleanCssForWordPress(css) {
+    let cleanedCss = css;
+    
+    // Remover :host selector y su contenido (es específico de Web Components)
+    cleanedCss = cleanedCss.replace(/:host\s*\{[^}]*\}/g, '');
+    
+    // Normalizar llaves - asegurar que cada selector tenga su llave de apertura
+    cleanedCss = cleanedCss.replace(/([^{}]+)\s*\{/g, '$1 {');
+    
+    // Asegurar que todas las propiedades CSS terminen con ; y tengan }
+    const cssRules = [];
+    const lines = cleanedCss.split('\n');
+    let currentRule = '';
+    let insideRule = false;
+    let braceCount = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      if (line.includes('{')) {
+        // Inicio de regla CSS
+        currentRule = line;
+        insideRule = true;
+        braceCount++;
+      } else if (line.includes('}')) {
+        // Fin de regla CSS
+        if (currentRule && insideRule) {
+          currentRule += '\n  }';
+          cssRules.push(currentRule);
+          currentRule = '';
+          insideRule = false;
+          braceCount--;
+        }
+      } else if (insideRule) {
+        // Propiedad CSS dentro de una regla
+        let property = line;
+        if (!property.endsWith(';') && property.includes(':')) {
+          property += ';';
+        }
+        currentRule += '\n  ' + property;
+      } else if (line.match(/^\.\w+[-\w]*/) && !line.includes('{')) {
+        // Selector sin llave de apertura - agregar llave
+        currentRule = line + ' {';
+        insideRule = true;
+        braceCount++;
+      }
+    }
+    
+    // Si quedó una regla abierta, cerrarla
+    if (currentRule && insideRule) {
+      currentRule += '\n}';
+      cssRules.push(currentRule);
+    }
+    
+    cleanedCss = cssRules.join('\n\n');
+    
+    // Limpiar espacios múltiples y líneas vacías
+    cleanedCss = cleanedCss.replace(/\n\s*\n\s*\n/g, '\n\n');
+    cleanedCss = cleanedCss.trim();
+    
+    return cleanedCss;
   }
 }
 

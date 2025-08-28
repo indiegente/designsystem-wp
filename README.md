@@ -93,6 +93,7 @@ npm run build-storybook  # Build de Storybook
 # WordPress
 npm run wp:generate      # Generar tema WordPress
 npm run wp:validate      # Validar tema generado
+npm run wp:validate-php  # Validar sintaxis PHP de forma interactiva
 
 # Stories (ACTUALIZADO)
 npm run stories:generate        # Generador básico (legacy)
@@ -452,7 +453,8 @@ Define la configuración completa del sistema:
 3. **Conversión**: Convierte componentes Lit a PHP
 4. **Assets**: Construye y copia CSS/JS
 5. **Templates**: Genera plantillas de página
-6. **Validación**: Verifica la integridad del tema
+6. **Validación Completa**: Verifica integridad y sintaxis PHP
+7. **Reporte**: Genera reportes de validación detallados
 
 ### Estructura del Tema Generado
 
@@ -533,6 +535,130 @@ function toulouse_page_seo_analytics() {
     // Aplicar configuración según plantilla
 }
 ```
+
+### 🔒 Validación Automática de Sintaxis PHP
+
+El sistema incluye validación automática de sintaxis PHP para prevenir errores en WordPress:
+
+#### 🔍 Validación Durante Generación
+
+```bash
+npm run wp:generate
+```
+
+**🆕 Características Avanzadas:**
+- ✅ **Validación en tiempo real** con `php -l` al escribir cada archivo PHP
+- ✅ **Pre-validación de patrones problemáticos** antes del CLI de PHP
+- ✅ **Rollback automático completo** si se detectan errores
+- ✅ **100% de archivos validados** antes del despliegue
+- ✅ **Detección temprana** de errores de sintaxis y runtime  
+- ✅ **Reportes detallados** con líneas específicas de error
+- ✅ **Prevención de deployment** con errores
+- ✅ **Detección de null pointers** en variables globales
+- ✅ **Protección contra errores runtime** comunes
+- ✅ **Limpieza CSS mejorada** (remoción de `:host` y Web Components)
+- ✅ **Detección de conflictos JavaScript/PHP** en templates
+
+#### 🛠️ Validación Interactiva
+
+```bash
+npm run wp:validate-php
+```
+
+**Salida ejemplo:**
+```
+🔍 Iniciando validación completa de sintaxis PHP...
+🐘 PHP detectado: PHP 8.4.4 (cli)
+📋 Validando archivos principales...
+📄 Validando templates de página...
+🧩 Validando componentes...
+
+📊 Reporte de Validación PHP
+══════════════════════════════════════════════════
+📁 Archivos totales: 19
+✅ Archivos válidos: 19
+❌ Errores encontrados: 0
+📈 Tasa de éxito: 100.0%
+
+🎉 ¡Todos los archivos PHP tienen sintaxis correcta!
+```
+
+#### 🚨 Patrones de Error Detectados
+
+**1. JavaScript en contexto PHP:**
+```php
+// ❌ Problemático - Puede confundir IDEs
+?>
+<script>
+// gtag('config', 'GA_ID', { ... });  // "config" causa error
+</script>
+<?php
+
+// ✅ Solucionado automáticamente
+echo '<script>';
+echo 'gtag("config", "GA_ID", { });';  // Encapsulado en echo
+echo '</script>';
+```
+
+**2. Web Components CSS en WordPress:**
+```css
+/* ❌ CSS de Lit Components - No válido en WordPress */
+:host {
+  display: block;
+}
+.component {
+  /* Sin llaves de cierre */
+/* ✅ CSS limpio automáticamente */
+.component-section {
+  display: block;
+}
+```
+
+**3. Variables globales sin validación:**
+```php
+// ❌ Peligroso - Null pointer
+global $toulouse_seo;
+echo $toulouse_seo->generateMetaTags();
+
+// ✅ Seguro - Validado automáticamente  
+global $toulouse_seo;
+if ($toulouse_seo && method_exists($toulouse_seo, 'generateMetaTags')) {
+    echo $toulouse_seo->generateMetaTags();
+}
+```
+
+#### ❌ Manejo de Errores
+
+Si se detectan errores:
+```
+❌ Errores de Sintaxis PHP:
+──────────────────────────────────────────────────
+📄 functions.php
+   └─ Línea 181: syntax error, unexpected identifier "config"
+   └─ Solución: JavaScript keywords en contexto PHP detectado
+
+📄 seo-manager.php  
+   └─ Línea 273: Uso de variable global $toulouse_seo sin verificar si existe (posible null pointer)
+   └─ Solución: Usar if ($var && method_exists($var, 'method'))
+
+📄 feature-grid.php
+   └─ CSS estructura malformada: selector sin llaves de cierre
+   └─ Solución: Aplicada limpieza automática de CSS
+
+🧹 Rollback completado. No se dejaron archivos con errores.
+
+💡 Consejos para corregir errores:
+   • JavaScript keywords → Usar echo para encapsular JS
+   • Variables globales → Validar con isset() y method_exists() 
+   • CSS Web Components → Limpieza automática aplicada
+   • Comillas no balanceadas → Verificar strings en echo statements
+```
+
+#### 📋 Prerrequisitos
+
+- **PHP CLI** instalado en el sistema
+- Versión recomendada: **PHP 8.0+**
+- Compatible con PHP 7.4+ 
 
 ## 📚 Documentación
 

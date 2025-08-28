@@ -57,11 +57,11 @@ class DynamicPageTemplates {
     const events = analytics.events || [];
     const eventCode = events.map(event => `
     // ${event.name}
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener("DOMContentLoaded", function() {
       // Implementar tracking para ${event.name}
-      // gtag('event', '${event.action}', {
-      //   'event_category': '${event.category}',
-      //   'event_label': '${event.label}'
+      // gtag("event", "${event.action}", {
+      //   "event_category": "${event.category}",
+      //   "event_label": "${event.label}"
       // });
     });`).join('');
     
@@ -69,9 +69,9 @@ class DynamicPageTemplates {
     <!-- Analytics -->
     <script>
     // Page View: ${analytics.pageView}
-    // gtag('config', 'GA_MEASUREMENT_ID', {
-    //   'page_title': '${analytics.pageView}',
-    //   'page_location': window.location.href
+    // gtag("config", "GA_MEASUREMENT_ID", {
+    //   "page_title": "${analytics.pageView}",
+    //   "page_location": window.location.href
     // });
     ${eventCode}
     </script>`;

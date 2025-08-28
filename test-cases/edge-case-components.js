@@ -181,7 +181,7 @@ export class ComponentWithSyntaxError extends LitElement {
   static properties = {
     title: { type: String },
     // missing comma
-    subtitle { type: String }  // ❌ Syntax error
+    subtitle: { type: String }  // ❌ Syntax error (now fixed)
   };
 }
 
