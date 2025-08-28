@@ -28,16 +28,18 @@ toulouse-design-system/
 │   │   └── feature-grid/
 │   ├── tokens/
 │   │   └── design-tokens.css # Variables CSS centralizadas
-│   ├── component-metadata.json # Configuración de componentes
+│   ├── component-metadata.json # Configuración completa del sistema
 │   ├── page-templates.json   # Configuración de páginas
 │   └── index.js             # Entry point
 ├── scripts/
 │   ├── wp-generator/        # Generador WordPress
-│   │   ├── component-generator.js
-│   │   ├── component-converter.js
-│   │   ├── template-builder.js
-│   │   ├── asset-manager.js
-│   │   └── templates/
+│   │   ├── component-generator.js  # Generación y conversión unificada
+│   │   ├── template-builder.js     # Plantillas WordPress
+│   │   ├── asset-manager.js        # Gestión de assets
+│   │   ├── extension-manager.js    # Sistema de extensiones
+│   │   ├── seo-manager.js         # SEO dinámico
+│   │   ├── validation-manager.js   # Validaciones avanzadas
+│   │   └── templates/             # Templates PHP
 │   └── generate-wp-templates.js
 ├── dist/                    # Build de Vite
 ├── wordpress-output/        # Tema WordPress generado
@@ -91,7 +93,11 @@ npm run build-storybook  # Build de Storybook
 # WordPress
 npm run wp:generate      # Generar tema WordPress
 npm run wp:validate      # Validar tema generado
-npm run wp:generate wp:validate  # Generar y validar
+
+# Stories (ACTUALIZADO)
+npm run stories:generate        # Generador básico (legacy)
+npm run stories:generate:robust # Generador robusto (recomendado) 
+npm run stories:test            # Testing del generador
 ```
 
 ## 🧩 Componentes
@@ -387,32 +393,52 @@ Define la estructura de páginas WordPress con componentes:
 }
 ```
 
-### Configuración de Componentes (`component-metadata.json`)
+### Configuración del Sistema (`component-metadata.json`)
 
-Define el comportamiento de cada componente:
+Define la configuración completa del sistema:
 
 ```json
 {
-  "component-name": {
-    "type": "static|iterative|aggregated",
-    "phpFunction": "render_function_name",
+  "postTypes": {
+    "carrera": {
+      "labels": {
+        "name": "Carreras",
+        "singular_name": "Carrera"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"]
+    },
+    "testimonio": {
+      "labels": {
+        "name": "Testimonios", 
+        "singular_name": "Testimonio"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
+    }
+  },
+  "templates": {
+    "page-carreras": {
+      "file": "page-carreras.php",
+      "title": "Carreras",
+      "description": "Explora nuestras carreras técnicas"
+    }
+  },
+  "componentMapping": {
+    "course-card": "carrera",
+    "testimonials": "testimonio"
+  },
+  "hero-section": {
+    "type": "static",
+    "phpFunction": "render_hero_section",
     "parameters": [
       {
-        "name": "paramName",
-        "type": "string|array|number",
-        "default": "defaultValue"
+        "name": "title",
+        "type": "string", 
+        "default": ""
       }
-    ],
-    "template": "template-name",
-    "aggregation": {
-      "mode": "collect",
-      "dataStructure": {
-        "fieldName": "wordpress_field"
-      },
-      "defaultValues": {
-        "fieldName": "defaultValue"
-      }
-    }
+    ]
   }
 }
 ```
@@ -454,27 +480,33 @@ wordpress-output/toulouse-lautrec/
 
 ### Custom Post Types
 
-El sistema registra automáticamente CPTs basados en los componentes:
+El sistema registra automáticamente CPTs basados en la metadata:
 
 ```php
-// functions.php
-register_post_type('carrera', array(
-    'labels' => array(
-        'name' => 'Carreras',
-        'singular_name' => 'Carrera'
-    ),
-    'public' => true,
-    'supports' => array('title', 'editor', 'thumbnail', 'excerpt')
-));
-
-register_post_type('testimonio', array(
-    'labels' => array(
-        'name' => 'Testimonios',
-        'singular_name' => 'Testimonio'
-    ),
-    'public' => true,
-    'supports' => array('title', 'editor', 'thumbnail', 'excerpt')
-));
+// functions.php - Generado automáticamente desde component-metadata.json
+function toulouse_register_post_types() {
+    // Carreras
+    register_post_type('carrera', array(
+        'labels' => array(
+            'name' => 'Carreras',
+            'singular_name' => 'Carrera'
+        ),
+        'public' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+    ));
+    
+    // Testimonios  
+    register_post_type('testimonio', array(
+        'labels' => array(
+            'name' => 'Testimonios',
+            'singular_name' => 'Testimonio'
+        ),
+        'public' => true,
+        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+        'show_in_rest' => true,
+    ));
+}
+add_action('init', 'toulouse_register_post_types');
 ```
 
 ### SEO y Analytics
@@ -518,8 +550,20 @@ Accede a: `http://localhost:6006`
 
 - **Design Tokens**: Colores, tipografías, espaciados
 - **Componentes**: Cada componente con sus variantes
+- **🆕 Mocks Personalizados**: Datos específicos del dominio para cada componente
 - **Páginas**: Ejemplos de páginas completas
 - **Guías**: Patrones de uso y mejores prácticas
+
+### Generación Automática de Stories
+
+Los stories se generan automáticamente con datos personalizados:
+
+```bash
+npm run stories:generate:robust  # Recomendado - usa archivos .mocks.js
+npm run stories:test             # Validar el generador
+```
+
+**Nuevo**: Los desarrolladores pueden crear archivos `.mocks.js` junto a sus componentes para definir datos de ejemplo específicos del dominio, eliminando la necesidad de datos genéricos.
 
 ### Generar Documentación
 
@@ -706,6 +750,14 @@ Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
 
 ### Recursos
 
+**📚 Documentación del Proyecto:**
+- **[🆕 Guía de Mocks Personalizados](./CUSTOM_MOCKS_GUIDE.md)** - Cómo crear datos de ejemplo personalizados
+- [📚 Generador de Stories](./STORIES_GENERATOR_GUIDE.md) - Sistema automático de generación de stories  
+- [🎯 Tutorial End-to-End](./TUTORIAL_END_TO_END.md) - De Lit Component a WordPress
+- [🧩 Guía de Extensiones](./EXTENSIONS_GUIDE.md) - Extensiones para WordPress
+- [🚀 Guía de Despliegue](./WORDPRESS-DEPLOYMENT.md) - Despliegue en WordPress
+
+**🌐 Documentación Externa:**
 - [Documentación Lit](https://lit.dev/docs/)
 - [WordPress Theme Handbook](https://developer.wordpress.org/themes/)
 - [Storybook Documentation](https://storybook.js.org/docs/)

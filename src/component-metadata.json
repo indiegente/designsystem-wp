@@ -1,4 +1,71 @@
 {
+  "postTypes": {
+    "carrera": {
+      "labels": {
+        "name": "Carreras",
+        "singular_name": "Carrera"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"]
+    },
+    "testimonio": {
+      "labels": {
+        "name": "Testimonios",
+        "singular_name": "Testimonio"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
+    },
+    "curso": {
+      "labels": {
+        "name": "Cursos",
+        "singular_name": "Curso"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"]
+    },
+    "producto": {
+      "labels": {
+        "name": "Productos",
+        "singular_name": "Producto"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt", "custom-fields"],
+      "show_in_rest": true
+    }
+  },
+  "templates": {
+    "page-carreras": {
+      "file": "page-carreras.php",
+      "title": "Carreras",
+      "description": "Explora nuestras carreras técnicas y programas especializados"
+    },
+    "page-contacto": {
+      "file": "page-contacto.php", 
+      "title": "Contacto",
+      "description": "Ponte en contacto con nosotros"
+    },
+    "single-carrera": {
+      "file": "single-carrera.php",
+      "title": "Carrera",
+      "description": "Detalle de carrera"
+    },
+    "page-productos": {
+      "file": "page-productos.php",
+      "title": "Productos",
+      "description": "Catálogo de productos y servicios"
+    },
+    "single-producto": {
+      "file": "single-producto.php",
+      "title": "Producto",
+      "description": "Detalle del producto"
+    }
+  },
+  "componentMapping": {
+    "course-card": "carrera",
+    "testimonials": "testimonio"
+  },
   "hero-section": {
     "type": "static",
     "phpFunction": "render_hero_section",
@@ -69,6 +136,27 @@
       "defaultValues": {
         "icon": "✨"
       }
+    }
+  },
+  "interactive-gallery": {
+    "type": "interactive",
+    "phpFunction": "render_interactive_gallery",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "" },
+      { "name": "subtitle", "type": "string", "default": "" },
+      { "name": "images", "type": "array", "default": "[]" },
+      { "name": "autoPlay", "type": "boolean", "default": "true" },
+      { "name": "showThumbnails", "type": "boolean", "default": "true" }
+    ],
+    "template": "interactive-gallery",
+    "interaction": {
+      "mode": "stateful",
+      "events": [
+        "image-changed",
+        "autoplay-toggled", 
+        "lightbox-open"
+      ],
+      "stateManagement": true
     }
   }
 }

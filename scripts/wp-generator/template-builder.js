@@ -7,38 +7,47 @@ class TemplateBuilder {
   constructor(config) {
     this.config = config;
     this.wpTemplates = new WpTemplates(config);
-    this.functionsTemplate = new FunctionsTemplate();
+    this.functionsTemplate = new FunctionsTemplate(config);
+    this.metadata = this.loadMetadata();
   }
 
-  generateAll() {
-    this.generateWordPressTemplates();
+  loadMetadata() {
+    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    if (fs.existsSync(metadataPath)) {
+      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    }
+    return {};
+  }
+
+  async generateAll() {
+    await this.generateWordPressTemplates();
     this.generateStyleHeader();
     this.generateFunctionsFile();
   }
 
-  generateWordPressTemplates() {
-    const templates = [
-      // Archivos obligatorios WordPress
+  async generateWordPressTemplates() {
+    // Templates básicos obligatorios de WordPress
+    const baseTemplates = [
       { name: 'header', file: 'header.php' },
       { name: 'footer', file: 'footer.php' },
       { name: '404', file: '404.php' },
       { name: 'search', file: 'search.php' },
       { name: 'index', file: 'index.php' },
-      { name: 'front-page', file: 'front-page.php' },
-      
-      // Templates específicos del proyecto
-      { name: 'page-quienes-somos', file: 'page-quienes-somos.php' },
-      { name: 'page-carreras', file: 'page-carreras.php' },
-      { name: 'single-carrera', file: 'single-carrera.php' },
-      { name: 'single-curso', file: 'single-curso.php' },
-      { name: 'page-contacto', file: 'page-contacto.php' },
-      { name: 'archive-articulos', file: 'archive-articulos.php' },
-      { name: 'single-articulo', file: 'single-articulo.php' },
-      { name: 'page-logros', file: 'page-logros.php' }
+      { name: 'front-page', file: 'front-page.php' }
     ];
 
-    templates.forEach(template => {
-      const templateContent = this.wpTemplates.generate(template.name);
+    // Templates desde metadata
+    const metadataTemplates = this.metadata.templates ? 
+      Object.entries(this.metadata.templates).map(([name, config]) => ({
+        name: name,
+        file: config.file
+      })) : [];
+
+    const templates = [...baseTemplates, ...metadataTemplates];
+
+    // Generar templates de forma asíncrona
+    const templatePromises = templates.map(async template => {
+      const templateContent = await this.wpTemplates.generate(template.name);
       const templatePath = path.join(
         this.config.outputDir, 
         this.config.themeName, 
@@ -47,6 +56,8 @@ class TemplateBuilder {
       
       fs.writeFileSync(templatePath, templateContent);
     });
+
+    await Promise.all(templatePromises);
   }
 
   generateStyleHeader() {

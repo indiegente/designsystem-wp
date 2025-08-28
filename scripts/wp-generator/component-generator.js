@@ -1,10 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const ExtensionManager = require('./extension-manager');
+const PhpComponentTemplate = require('./templates/php-components');
 
 class ComponentGenerator {
   constructor(config) {
     this.config = config;
     this.metadata = this.loadComponentMetadata();
+    this.extensionManager = new ExtensionManager(config);
+    this.phpTemplate = new PhpComponentTemplate(config);
   }
 
   loadComponentMetadata() {
@@ -22,25 +26,50 @@ class ComponentGenerator {
     }
   }
 
-  generateComponentCode(component, dataSource) {
+  async generateComponentCode(component, dataSource) {
     const componentName = component.name;
     const metadata = this.metadata[componentName];
     
-    if (!metadata) {
+    // Contexto para extensiones
+    const context = {
+      component,
+      metadata,
+      dataSource,
+      config: this.config
+    };
+
+    // Ejecutar hooks antes del renderizado
+    await this.extensionManager.executeBeforeComponentRender(component, context);
+
+    let result;
+
+    // Verificar si hay un tipo de componente personalizado
+    const customType = this.extensionManager.getCustomComponentType(metadata?.type);
+    if (customType && customType.generateCode) {
+      result = customType.generateCode(component, metadata, dataSource);
+    } else if (!metadata) {
       console.warn(`⚠️ No se encontró metadata para el componente: ${componentName}`);
-      return this.generateFallbackCode(component, dataSource);
+      result = this.generateFallbackCode(component, dataSource);
+    } else {
+      switch (metadata.type) {
+        case 'static':
+          result = this.generateStaticComponent(component, metadata);
+          break;
+        case 'iterative':
+          result = this.generateIterativeComponent(component, metadata, dataSource);
+          break;
+        case 'aggregated':
+          result = this.generateAggregatedComponent(component, metadata, dataSource);
+          break;
+        default:
+          result = this.generateFallbackCode(component, dataSource);
+      }
     }
 
-    switch (metadata.type) {
-      case 'static':
-        return this.generateStaticComponent(component, metadata);
-      case 'iterative':
-        return this.generateIterativeComponent(component, metadata, dataSource);
-      case 'aggregated':
-        return this.generateAggregatedComponent(component, metadata, dataSource);
-      default:
-        return this.generateFallbackCode(component, dataSource);
-    }
+    // Ejecutar hooks después del renderizado
+    result = await this.extensionManager.executeAfterComponentRender(component, context, result);
+
+    return result;
   }
 
   generateStaticComponent(component, metadata) {
@@ -146,12 +175,11 @@ class ComponentGenerator {
   }
 
   buildQueryString(query, componentName) {
-    // Asegurar post_type basado en el componente
-    if (!query.post_type) {
-      if (componentName === 'course-card') {
-        query.post_type = 'carrera';
-      } else if (componentName === 'testimonials') {
-        query.post_type = 'testimonio';
+    // Asegurar post_type basado en el mapeo de metadata
+    if (!query.post_type && this.metadata.componentMapping) {
+      const mappedPostType = this.metadata.componentMapping[componentName];
+      if (mappedPostType) {
+        query.post_type = mappedPostType;
       }
     }
     
@@ -169,9 +197,100 @@ class ComponentGenerator {
       .join(', ');
   }
 
+  /**
+   * Obtiene estadísticas de extensiones para debugging
+   */
+  getExtensionStats() {
+    return this.extensionManager.getStats();
+  }
+
   getComponentTemplate(componentName) {
     const metadata = this.metadata[componentName];
     return metadata?.template || componentName;
+  }
+
+  // Métodos para conversión de componentes Lit a PHP
+  async convertAllComponents() {
+    const componentsDir = path.join(this.config.srcDir, 'components');
+    const components = fs.readdirSync(componentsDir);
+
+    for (const componentName of components) {
+      const componentPath = path.join(componentsDir, componentName);
+      if (fs.statSync(componentPath).isDirectory()) {
+        await this.convertSingleComponent(componentName, componentPath);
+      }
+    }
+  }
+
+  async convertSingleComponent(componentName, componentPath) {
+    const litFile = path.join(componentPath, `${componentName}.js`);
+    
+    if (!fs.existsSync(litFile)) {
+      console.warn(`⚠️ No se encontró ${litFile}`);
+      return;
+    }
+
+    const litContent = fs.readFileSync(litFile, 'utf8');
+    const phpComponent = this.litToPhp(componentName, litContent);
+    
+    const outputPath = path.join(
+      this.config.outputDir, 
+      this.config.themeName, 
+      'components', 
+      componentName,
+      `${componentName}.php`
+    );
+    
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, phpComponent);
+    
+    console.log(`✅ Convertido: ${componentName}`);
+  }
+
+  litToPhp(componentName, litContent) {
+    const props = this.extractPropsFromLit(litContent);
+    const cssClasses = this.extractCssClasses(litContent);
+    
+    return this.phpTemplate.generate(componentName, props, cssClasses);
+  }
+
+  extractPropsFromLit(litContent) {
+    const propMatches = litContent.match(/static properties = \{([^}]+)\}/s);
+    if (!propMatches) return [];
+
+    const propsString = propMatches[1];
+    const props = [];
+    
+    // Buscar propiedades con type definido
+    const propRegex = /(\w+):\s*\{\s*type:\s*(\w+)/g;
+    let match;
+    
+    while ((match = propRegex.exec(propsString)) !== null) {
+      props.push({
+        name: match[1],
+        type: match[2].toLowerCase()
+      });
+    }
+    
+    // Si no se encontraron propiedades con type, buscar propiedades simples
+    if (props.length === 0) {
+      const simplePropRegex = /(\w+):\s*\{/g;
+      while ((match = simplePropRegex.exec(propsString)) !== null) {
+        props.push({
+          name: match[1],
+          type: 'string'
+        });
+      }
+    }
+    
+    return props;
+  }
+
+  extractCssClasses(litContent) {
+    const cssMatches = litContent.match(/css`([^`]+)`/s);
+    if (!cssMatches) return '';
+    
+    return cssMatches[1];
   }
 }
 

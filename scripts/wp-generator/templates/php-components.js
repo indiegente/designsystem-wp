@@ -1,16 +1,25 @@
-const ComponentGenerator = require('../component-generator');
+const fs = require('fs');
+const path = require('path');
 
 class PhpComponentTemplate {
   constructor(config) {
     this.config = config;
-    this.componentGenerator = new ComponentGenerator(config);
+    this.metadata = this.loadMetadata();
+  }
+
+  loadMetadata() {
+    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    if (fs.existsSync(metadataPath)) {
+      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    }
+    return {};
   }
 
   generate(componentName, props, cssClasses) {
     const functionName = `render_${componentName.replace('-', '_')}`;
     
     // Usar metadata para generar parámetros
-    const propsParams = this.componentGenerator.generatePhpParameters(componentName) || 
+    const propsParams = this.generatePhpParameters(componentName) || 
       props.map(prop => `$${prop.name} = ''`).join(', ');
     
     return `<?php
@@ -140,6 +149,15 @@ add_action('wp_head', function() {
                 <?php echo esc_html($value); ?>
             </span>
         <?php endforeach; ?>`;
+  }
+
+  generatePhpParameters(componentName) {
+    const metadata = this.metadata[componentName];
+    if (!metadata) return '';
+    
+    return metadata.parameters
+      .map(param => `$${param.name} = '${param.default}'`)
+      .join(', ');
   }
 }
 

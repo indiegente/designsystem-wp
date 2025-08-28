@@ -1,4 +1,42 @@
 class FunctionsTemplate {
+  constructor(config) {
+    this.config = config;
+    this.metadata = this.loadMetadata();
+  }
+
+  loadMetadata() {
+    const fs = require('fs');
+    const path = require('path');
+    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    
+    if (fs.existsSync(metadataPath)) {
+      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    }
+    return {};
+  }
+
+  generatePostTypes() {
+    if (!this.metadata.postTypes) return '';
+    
+    return Object.entries(this.metadata.postTypes)
+      .map(([postType, config]) => {
+        const supports = config.supports ? `array('${config.supports.join("', '")}')` : "array('title', 'editor')";
+        const showInRest = config.show_in_rest ? "'show_in_rest' => true," : "";
+        
+        return `    // ${config.labels.name}
+    register_post_type('${postType}', array(
+        'labels' => array(
+            'name' => '${config.labels.name}',
+            'singular_name' => '${config.labels.singular_name}'
+        ),
+        'public' => ${config.public ? 'true' : 'false'},
+        'supports' => ${supports},
+        ${showInRest}
+    ));`;
+      })
+      .join('\n    \n');
+  }
+
   generate() {
     return `<?php
 /**
@@ -44,38 +82,31 @@ function toulouse_load_components() {
 }
 add_action('init', 'toulouse_load_components');
 
-// Custom Post Types
+// Cargar módulos avanzados
+function toulouse_load_advanced_modules() {
+    // Cargar sistema de validación y fallbacks
+    $validation_file = get_template_directory() . '/inc/validation.php';
+    if (file_exists($validation_file)) {
+        require_once $validation_file;
+    }
+    
+    // Cargar sistema SEO dinámico
+    $seo_file = get_template_directory() . '/inc/seo-manager.php';
+    if (file_exists($seo_file)) {
+        require_once $seo_file;
+    }
+    
+    // Cargar sistema de assets optimizados
+    $assets_file = get_template_directory() . '/inc/asset-enqueue.php';
+    if (file_exists($assets_file)) {
+        require_once $assets_file;
+    }
+}
+add_action('init', 'toulouse_load_advanced_modules');
+
+// Custom Post Types - Generado desde metadata
 function toulouse_register_post_types() {
-    // Carreras
-    register_post_type('carrera', array(
-        'labels' => array(
-            'name' => 'Carreras',
-            'singular_name' => 'Carrera'
-        ),
-        'public' => true,
-        'supports' => array('title', 'editor', 'thumbnail', 'excerpt')
-    ));
-    
-    // Cursos
-    register_post_type('curso', array(
-        'labels' => array(
-            'name' => 'Cursos',
-            'singular_name' => 'Curso'
-        ),
-        'public' => true,
-        'supports' => array('title', 'editor', 'thumbnail', 'excerpt')
-    ));
-    
-    // Testimonios
-    register_post_type('testimonio', array(
-        'labels' => array(
-            'name' => 'Testimonios',
-            'singular_name' => 'Testimonio'
-        ),
-        'public' => true,
-        'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
-        'show_in_rest' => true
-    ));
+${this.generatePostTypes()}
 }
 add_action('init', 'toulouse_register_post_types');
 

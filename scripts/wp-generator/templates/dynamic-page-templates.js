@@ -82,15 +82,25 @@ class DynamicPageTemplates {
     return `require_once get_template_directory() . '/components/${component.name}/${component.name}.php';`;
   }
 
-  generateComponentRender(component, index) {
-    // Usar el nuevo generador basado en metadata
-    return this.componentGenerator.generateComponentCode(component, component.dataSource);
+  async generateComponentRender(component, index) {
+    // Usar el nuevo generador basado en metadata con soporte para extensiones
+    return await this.componentGenerator.generateComponentCode(component, component.dataSource);
   }
 
 
 
-  generatePageTemplate(pageName) {
+  async generatePageTemplate(pageName) {
     const pageConfig = this.pageConfig[pageName];
+    
+    // Contexto para extensiones
+    const context = {
+      pageName,
+      pageConfig,
+      config: this.config
+    };
+
+    // Ejecutar hooks antes de la generación del template
+    await this.componentGenerator.extensionManager.executeBeforeTemplateGeneration(pageName, context);
     
     if (!pageConfig) {
       // Fallback a template básico
@@ -103,11 +113,14 @@ class DynamicPageTemplates {
       .map(component => this.generateComponentInclude(component))
       .join('\n');
 
-    const componentRenders = components
-      .map((component, index) => this.generateComponentRender(component, index))
-      .join('\n\n    ');
+    // Generar renders de componentes de forma asíncrona
+    const componentRendersPromises = components.map((component, index) => 
+      this.generateComponentRender(component, index)
+    );
+    const componentRenders = await Promise.all(componentRendersPromises);
+    const componentRendersString = componentRenders.join('\n\n    ');
 
-    return `<?php
+    let result = `<?php
 /*
 Template Name: ${this.generateTemplateName(pageName)}
 */
@@ -118,7 +131,7 @@ get_header();
 ${componentIncludes}
 
 // Renderizar componentes
-${componentRenders}
+${componentRendersString}
 ?>
 
 <main class="${pageName}-content">
@@ -133,6 +146,11 @@ ${componentRenders}
 </main>
 
 <?php get_footer(); ?>`;
+
+    // Ejecutar hooks después de la generación del template
+    result = await this.componentGenerator.extensionManager.executeAfterTemplateGeneration(pageName, context, result);
+
+    return result;
   }
 
   generateBasicTemplate(templateName) {
@@ -160,10 +178,10 @@ get_header();
 <?php get_footer(); ?>`;
   }
 
-  generate(templateName) {
+  async generate(templateName) {
     // Si es un template de página configurado, usar configuración dinámica
     if (this.pageConfig[templateName]) {
-      return this.generatePageTemplate(templateName);
+      return await this.generatePageTemplate(templateName);
     }
 
     // Fallback a template básico
