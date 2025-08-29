@@ -116,6 +116,7 @@ npm run build-storybook  # Build de Storybook
 npm run wp:generate      # Generar tema WordPress completo
 npm run wp:validate      # Validar tema generado
 npm run wp:validate-php  # Validar sintaxis PHP interactiva
+npm run wp:test-urls     # Probar URLs del tema WordPress
 
 # Stories (ACTUALIZADO)
 npm run stories:generate        # Generador básico (legacy)

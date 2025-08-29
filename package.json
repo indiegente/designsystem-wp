@@ -10,7 +10,7 @@
     "build-storybook": "storybook build",
     "wp:generate": "node scripts/config/generate-wp-templates.js",
     "wp:validate": "node scripts/validation/validate-wp-theme.js",
-    "wp:validate-php": "node -e \"const PHPValidator = require('./scripts/wp-generator/php-validator'); const v = new PHPValidator({outputDir: './wordpress-output', themeName: 'toulouse-lautrec'}); v.runInteractiveValidation();\"",
+    "wp:validate-php": "node -e \"const config = require('./scripts/wp-generator/core/config'); const PHPValidator = require('./scripts/wp-generator/validation/php-validator'); const v = new PHPValidator({outputDir: config.paths.output, themeName: config.theme.name}); v.runInteractiveValidation();\"",
     "wp:test-urls": "node scripts/validation/wordpress-url-tester.js",
     "stories:generate": "node scripts/storybook/generate-stories.js",
     "stories:generate:robust": "node scripts/storybook/generate-stories-robust.js",
