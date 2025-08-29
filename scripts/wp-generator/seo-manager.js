@@ -109,7 +109,7 @@ class ToulouseSEOManager {
     
     public function __construct() {
         $this->loadSEOConfig();
-        $this->current_template = get_page_template_slug();
+        $this->current_template = $this->getCurrentTemplateSlug();
         $this->current_components = $this->getCurrentComponents();
     }
     
@@ -139,6 +139,34 @@ class ToulouseSEOManager {
                 'twitterCard' => 'summary_large_image'
             )
         );
+    }
+    
+    /**
+     * Obtiene el slug del template actual
+     */
+    private function getCurrentTemplateSlug() {
+        global $template;
+        
+        if ($template) {
+            $template_name = basename($template, '.php');
+            return $template_name;
+        }
+        
+        // Fallback: usar el slug del template
+        $template_slug = get_page_template_slug();
+        if ($template_slug) {
+            return basename($template_slug, '.php');
+        }
+        
+        // Último fallback: detectar por tipo de página
+        if (is_page()) {
+            $page_template = get_page_template();
+            if ($page_template) {
+                return basename($page_template, '.php');
+            }
+        }
+        
+        return '';
     }
     
     /**
@@ -375,6 +403,15 @@ function toulouse_seo_meta_tags() {
     global $toulouse_seo;
     if ($toulouse_seo && method_exists($toulouse_seo, 'generateMetaTags')) {
         echo $toulouse_seo->generateMetaTags();
+    } else {
+        // Si no hay instancia global, crear una nueva instancia directamente
+        try {
+            $seo_manager = new ToulouseSEOManager();
+            echo $seo_manager->generateMetaTags();
+        } catch (Exception $e) {
+            // Fallback mínimo en caso de error crítico
+            echo '<meta name="description" content="Toulouse Lautrec - Design System">';
+        }
     }
 }
 add_action('wp_head', 'toulouse_seo_meta_tags');
@@ -389,6 +426,20 @@ function toulouse_seo_structured_data() {
             echo '<script type="application/ld+json">';
             echo json_encode($structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
             echo '</script>';
+        }
+    } else {
+        // Si no hay instancia global, crear una nueva instancia directamente
+        try {
+            $seo_manager = new ToulouseSEOManager();
+            $structured_data = $seo_manager->generateStructuredData();
+            
+            if (!empty($structured_data)) {
+                echo '<script type="application/ld+json">';
+                echo json_encode($structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                echo '</script>';
+            }
+        } catch (Exception $e) {
+            // Ignorar errores en structured data - no es crítico
         }
     }
 }
