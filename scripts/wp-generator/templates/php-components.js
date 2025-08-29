@@ -172,7 +172,7 @@ add_action('wp_head', function() {
   /**
    * Convierte un template Lit a PHP
    */
-  convertLitTemplateToPhp(litTemplate) {
+  convertLitTemplateToPhp(litTemplate, componentName) {
     let phpTemplate = litTemplate;
     
     // Manejar arrays con map() - caso especial para feature-grid

@@ -1,0 +1,190 @@
+# 🚨 REGLAS CRÍTICAS DEL PROYECTO - TOULOUSE DESIGN SYSTEM
+
+## ❌ PROHIBIDO: FALLBACKS
+- **NUNCA** usar fallbacks silenciosos que oculten errores
+- **NUNCA** continuar la ejecución si hay errores críticos
+- **NUNCA** generar archivos parciales o con errores
+- **SIEMPRE** fallar rápido con errores claros y específicos
+- **SIEMPRE** hacer rollback completo si algo falla
+
+### ❌ Ejemplos PROHIBIDOS:
+```javascript
+// ❌ PROHIBIDO - Fallback silencioso
+try {
+    result = criticalOperation();
+} catch (error) {
+    console.warn('Error ignorado, continuando...');
+    result = 'default_value'; // NUNCA HACER ESTO
+}
+
+// ❌ PROHIBIDO - Continuar con errores
+if (!config.analytics.measurementId) {
+    console.warn('GA4 ID faltante, deshabilitando analytics...');
+    config.analytics.enabled = false; // NUNCA HACER ESTO
+}
+```
+
+### ✅ Ejemplos CORRECTOS:
+```javascript
+// ✅ CORRECTO - Fail fast
+if (!config.analytics.measurementId) {
+    throw new Error('❌ FALTA GA4 Measurement ID en config.js → analytics.googleAnalytics.measurementId');
+}
+
+// ✅ CORRECTO - Rollback completo
+if (error) {
+    await rollbackCompleteGeneration();
+    throw new Error(`❌ Generación falló: ${error.message}`);
+}
+```
+
+## 🎯 FAIL-FAST PRINCIPLES
+
+1. **DETECTAR errores temprano**
+2. **FALLAR rápido** con mensajes claros
+3. **ROLLBACK completo** - no dejar archivos parciales
+4. **MOSTRAR ubicación exacta** del problema (archivo:línea)
+5. **PROPONER solución específica** en el mensaje de error
+
+## 📋 VALIDACIONES OBLIGATORIAS
+
+### ⚠️ Antes de cualquier generación:
+- [ ] **OBLIGATORIO**: Ejecutar `nvm use 24` SIEMPRE
+- [ ] Verificar que `config.js` tenga todos los valores requeridos
+- [ ] Verificar que `component-metadata.json` sea válido
+- [ ] Verificar que Node.js sea versión 24+ (auto-validado)
+- [ ] Verificar que PHP CLI esté disponible
+- [ ] Verificar que Vite config sea válido
+
+### 🔧 COMANDOS OBLIGATORIOS ANTES DE GENERAR:
+```bash
+nvm use 24              # SIEMPRE ejecutar PRIMERO
+npm run wp:generate     # Después de nvm use 24
+```
+
+### ⚠️ Durante la generación:
+- [ ] Validar cada archivo PHP inmediatamente después de crearlo
+- [ ] Verificar que cada extensión se cargue correctamente
+- [ ] Validar que cada manager tenga configuración válida
+- [ ] Verificar sintaxis de templates generados
+
+### ⚠️ Después de la generación:
+- [ ] Validar sintaxis completa de PHP con `php -l`
+- [ ] Verificar que todos los archivos requeridos existan
+- [ ] Validar estructura de directorios
+- [ ] Probar URLs si WordPress está corriendo
+
+## 🚫 CASOS DE ERROR COMUNES
+
+### 1. Configuración Faltante
+```javascript
+// ❌ ANTES (con fallback)
+const measurementId = config.analytics?.googleAnalytics?.measurementId || 'G-DEFAULT';
+
+// ✅ DESPUÉS (fail fast)
+if (!config.analytics?.googleAnalytics?.measurementId) {
+    throw new Error('❌ CONFIGURACIÓN FALTANTE: GA4 Measurement ID requerido en config.js');
+}
+```
+
+### 2. Archivos Faltantes
+```javascript
+// ❌ ANTES (con fallback)
+if (!fs.existsSync(metadataFile)) {
+    console.warn('Metadata no encontrado, usando defaults...');
+    return defaultMetadata;
+}
+
+// ✅ DESPUÉS (fail fast)
+if (!fs.existsSync(metadataFile)) {
+    throw new Error(`❌ ARCHIVO REQUERIDO: ${metadataFile} no encontrado`);
+}
+```
+
+### 3. Versión de Node.js
+```javascript
+// ❌ ANTES (con fallback)
+if (nodeVersion < 20) {
+    console.warn('Node.js antiguo, algunas features pueden no funcionar...');
+}
+
+// ✅ DESPUÉS (fail fast)
+if (nodeVersion < 24) {
+    throw new Error('❌ VERSIÓN REQUERIDA: Node.js 24+ requerido. Actual: ' + nodeVersion);
+}
+```
+
+### 4. Errores de Build
+```javascript
+// ❌ ANTES (con fallback)
+try {
+    await runViteBuild();
+} catch (error) {
+    console.warn('Build falló, usando assets básicos...');
+    await generateBasicAssets();
+}
+
+// ✅ DESPUÉS (fail fast)
+try {
+    await runViteBuild();
+} catch (error) {
+    await rollbackGeneration();
+    throw new Error(`❌ BUILD FALLÓ: ${error.message}\n💡 Ejecutar: npm run build para debug`);
+}
+```
+
+## 🔧 COMANDOS DE VALIDACIÓN
+
+### Antes de desarrollar:
+```bash
+nvm use 24                # SIEMPRE usar Node 24
+npm run wp:validate-php   # Validar sintaxis PHP
+npm run build             # Verificar que Vite funcione
+```
+
+### Durante desarrollo:
+```bash
+npm run wp:generate       # Debe fallar si hay problemas
+npm run wp:test-urls      # Validar URLs en vivo
+```
+
+## 📝 MENSAJES DE ERROR REQUERIDOS
+
+Todos los errores DEBEN incluir:
+
+1. **❌ Símbolo de error claro**
+2. **Descripción específica** del problema
+3. **Ubicación exacta** (archivo:línea si aplica)
+4. **💡 Solución propuesta** clara y actionable
+5. **🧹 Rollback notification** si se ejecutó
+
+### Ejemplo de mensaje CORRECTO:
+```
+❌ ANALYTICS MANAGER FALLÓ: GA4 Measurement ID no configurado
+📍 Ubicación: scripts/wp-generator/core/config.js línea 81
+💡 Solución: Cambiar 'G-XXXXXXXXXX' por tu GA4 ID real
+🧹 Rollback ejecutado: archivos PHP limpiados
+```
+
+## 🛡️ ENFORCEMENT
+
+### En código JavaScript:
+```javascript
+// Al inicio de cada manager
+if (process.env.NODE_ENV !== 'test') {
+    console.log('🚨 FAIL-FAST MODE: Errores causarán terminación inmediata');
+}
+```
+
+### En scripts npm:
+```json
+{
+  "scripts": {
+    "wp:generate": "node -e \"process.env.FAIL_FAST=true\" && node scripts/config/generate-wp-templates.js"
+  }
+}
+```
+
+---
+
+**🎯 RECUERDA: "Si hay errores que los procesos se trunquen, sino vamos a generar archivos que no sirven"**

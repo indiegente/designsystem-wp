@@ -1,7 +1,7 @@
-// vite.config.js
-import { defineConfig } from 'vite';
+// vite.config.js  
+const { defineConfig } = require('vite');
 
-export default defineConfig({
+module.exports = defineConfig({
   build: {
     lib: {
       entry: 'src/index.js',

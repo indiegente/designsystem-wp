@@ -32,35 +32,34 @@ class ExtensionManager {
     const extensionsDir = path.join(this.config.srcDir, 'extensions');
     
     if (!fs.existsSync(extensionsDir)) {
-      console.log('📁 No se encontró carpeta de extensiones, creando...');
-      fs.mkdirSync(extensionsDir, { recursive: true });
-      this.createExtensionExamples(extensionsDir);
+      console.log('📁 No se encontró carpeta de extensiones - continuando sin extensiones');
       return [];
     }
 
     const extensions = [];
-    const extensionFiles = fs.readdirSync(extensionsDir);
+    const extensionFiles = fs.readdirSync(extensionsDir).filter(file => 
+      file.endsWith('.js') && !file.includes('example')
+    );
 
     for (const file of extensionFiles) {
-      if (file.endsWith('.js')) {
-        try {
-          const extensionPath = path.resolve(extensionsDir, file);
-          delete require.cache[extensionPath]; // Limpiar cache para recargas
-          const extension = require(extensionPath);
-          
-          if (typeof extension === 'function') {
-            const extensionInstance = extension(this.config);
-            extensions.push(extensionInstance);
-            this.registerExtension(extensionInstance);
-          } else if (extension && typeof extension.register === 'function') {
-            extensions.push(extension);
-            this.registerExtension(extension);
-          }
-          
-          console.log(`✅ Extensión cargada: ${file}`);
-        } catch (error) {
-          console.error(`❌ Error cargando extensión ${file}:`, error.message);
+      try {
+        const extensionPath = path.resolve(extensionsDir, file);
+        delete require.cache[extensionPath]; // Limpiar cache para recargas
+        const extension = require(extensionPath);
+        
+        if (typeof extension === 'function') {
+          const extensionInstance = extension(this.config);
+          extensions.push(extensionInstance);
+          this.registerExtension(extensionInstance);
+        } else if (extension && typeof extension.register === 'function') {
+          extensions.push(extension);
+          this.registerExtension(extension);
         }
+        
+        console.log(`✅ Extensión cargada: ${file}`);
+      } catch (error) {
+        // FAIL FAST - No permitir extensiones con errores
+        throw new Error(`❌ EXTENSIÓN CON ERRORES: ${file}\n💡 Error: ${error.message}\n💡 Ubicación: ${path.join(extensionsDir, file)}\n💡 Solución: Corregir sintaxis o eliminar archivo`);
       }
     }
 

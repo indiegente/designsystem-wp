@@ -24,27 +24,20 @@ class AssetManager {
   build() {
     console.log('📦 Construyendo assets optimizados...');
     
-    try {
-      // Intentar build de Vite, pero continuar con fallback si falla
-      const viteBuildSuccess = this.buildViteAssets();
-      
-      if (viteBuildSuccess) {
-        this.generateAssetManifest();
-        this.optimizeAssets();
-        this.copyViteAssets();
-        this.copyDesignTokens();
-        this.generateAssetConfig();
-        this.generateAssetEnqueueFile();
-        this.generateAvailableAssetsManifest(true);
-      } else {
-        console.log('🔧 Usando modo fallback para assets...');
-        this.generateFallbackAssets();
-      }
-    } catch (error) {
-      console.error('❌ Error construyendo assets:', error.message);
-      console.log('🔧 Intentando modo fallback...');
-      this.generateFallbackAssets();
+    // FAIL FAST - No fallbacks permitidos
+    const viteBuildSuccess = this.buildViteAssets();
+    
+    if (!viteBuildSuccess) {
+      throw new Error('❌ VITE BUILD FALLÓ: Assets optimizados son requeridos\n💡 Ejecutar: npm run build para debug\n💡 Verificar: nvm use 24');
     }
+    
+    this.generateAssetManifest();
+    this.optimizeAssets();
+    this.copyViteAssets();
+    this.copyDesignTokens();
+    this.generateAssetConfig();
+    this.generateAssetEnqueueFile();
+    this.generateAvailableAssetsManifest(true);
   }
 
   buildViteAssets() {
@@ -52,8 +45,8 @@ class AssetManager {
       execSync('npm run build', { stdio: 'inherit' });
       return true;
     } catch (error) {
-      console.log('⚠️ Error en build de Vite:', error.message);
-      return false;
+      // FAIL FAST - No continuar sin assets válidos
+      throw new Error(`❌ VITE BUILD ERROR: ${error.message}\n💡 Verificar: nvm use 24\n💡 Verificar: npm run build funciona correctamente`);
     }
   }
 

@@ -72,10 +72,17 @@ class WordPressGenerator {
   async generate() {
     console.log('🚀 Iniciando generación de tema WordPress avanzado...');
     
+    // 0. Validar Node.js version (FAIL FAST)
+    const nodeVersion = process.version;
+    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+    if (majorVersion < 24) {
+      throw new Error(`❌ NODE.js VERSION: Requerido Node.js 24+. Actual: ${nodeVersion}\n💡 Ejecutar: nvm use 24`);
+    }
+    
     let generationStarted = false;
     
     try {
-      // 0. Limpiar directorio de salida anterior
+      // 1. Limpiar directorio de salida anterior
       this.cleanOutputDirectory();
       
       // 1. Crear estructura del tema
