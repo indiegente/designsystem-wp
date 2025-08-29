@@ -11,6 +11,7 @@
     "wp:generate": "node scripts/config/generate-wp-templates.js",
     "wp:validate": "node scripts/validation/validate-wp-theme.js",
     "wp:validate-php": "node -e \"const PHPValidator = require('./scripts/wp-generator/php-validator'); const v = new PHPValidator({outputDir: './wordpress-output', themeName: 'toulouse-lautrec'}); v.runInteractiveValidation();\"",
+    "wp:test-urls": "node scripts/validation/wordpress-url-tester.js",
     "stories:generate": "node scripts/storybook/generate-stories.js",
     "stories:generate:robust": "node scripts/storybook/generate-stories-robust.js",
     "stories:test": "node scripts/storybook/test-story-generator.js"

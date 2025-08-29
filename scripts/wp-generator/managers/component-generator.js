@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const ExtensionManager = require('./extension-manager');
-const PhpComponentTemplate = require('./templates/php-components');
-const PHPValidator = require('./php-validator');
+const ExtensionManager = require('../extensions/extension-manager');
+const PhpComponentTemplate = require('../templates/php-components');
+const PHPValidator = require('../validation/php-validator');
 
 class ComponentGenerator {
   constructor(config) {
@@ -122,15 +122,46 @@ class ComponentGenerator {
     
     const dataMapping = Object.entries(dataStructure).map(([key, value]) => {
       let mapping = '';
-      if (value === 'post_title') mapping = 'get_the_title()';
-      else if (value === 'post_excerpt') mapping = 'get_the_excerpt()';
-      else if (value === 'post_content') mapping = 'get_the_content()';
-      else if (value.startsWith('meta_')) {
-        const metaKey = value.replace('meta_', '');
+      
+      // Manejar nueva estructura con type specification
+      if (typeof value === 'object' && value.source && value.type) {
+        const source = value.source;
+        const fieldType = value.type;
         const defaultValue = defaultValues[key] || '';
-        mapping = `get_post_meta(get_the_ID(), '${metaKey}', true) ?: '${defaultValue}'`;
+        
+        if (source === 'post_title') mapping = 'get_the_title()';
+        else if (source === 'post_excerpt') mapping = 'get_the_excerpt()';
+        else if (source === 'post_content') mapping = 'get_the_content()';
+        else if (source.startsWith('meta_')) {
+          const metaKey = source.replace('meta_', '');
+          
+          if (fieldType === 'acf') {
+            mapping = `get_field('${metaKey}') ?: '${defaultValue}'`;
+          } else {
+            mapping = `get_post_meta(get_the_ID(), '${metaKey}', true) ?: '${defaultValue}'`;
+          }
+        }
+        else mapping = `'${source}'`;
       }
-      else mapping = `'${value}'`;
+      // Backward compatibility - estructura anterior
+      else if (typeof value === 'string') {
+        if (value === 'post_title') mapping = 'get_the_title()';
+        else if (value === 'post_excerpt') mapping = 'get_the_excerpt()';
+        else if (value === 'post_content') mapping = 'get_the_content()';
+        else if (value.startsWith('meta_')) {
+          const metaKey = value.replace('meta_', '');
+          const defaultValue = defaultValues[key] || '';
+          
+          // Check fieldTypes for ACF vs native
+          const fieldTypes = metadata.fieldTypes || {};
+          if (fieldTypes[key] === 'acf') {
+            mapping = `get_field('${metaKey}') ?: '${defaultValue}'`;
+          } else {
+            mapping = `get_post_meta(get_the_ID(), '${metaKey}', true) ?: '${defaultValue}'`;
+          }
+        }
+        else mapping = `'${value}'`;
+      }
       
       return `'${key}' => ${mapping}`;
     }).join(',\n          ');

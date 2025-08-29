@@ -94,6 +94,9 @@ npm run wp:validate-php
 
 # Validación general del tema (opcional)
 npm run wp:validate
+
+# 🆕 Validación completa contra WordPress en vivo
+npm run wp:test-urls
 ```
 
 **🆕 Características Avanzadas:**
@@ -106,6 +109,8 @@ npm run wp:validate
 - ✅ **SEO dinámico** con meta tags específicos por template
 - ✅ **Configuración client-agnostic** usando ConfigManager
 - ✅ **Asset management** con ES6/UMD y hashes únicos
+- ✅ **ACF vs Native Fields** soporte en metadata de componentes
+- ✅ **WordPress URL Testing** validación contra sitio en vivo
 
 ### 3. Ver Cambios en WordPress
 Los cambios se reflejan automáticamente gracias al symlink:
@@ -117,7 +122,7 @@ Los cambios se reflejan automáticamente gracias al symlink:
 
 ## ✅ Validación de Compatibilidad
 
-### Validación Completa del Tema
+### 1. Validación Completa del Tema
 
 El validador verifica que el tema sea compatible con WordPress:
 
@@ -130,7 +135,7 @@ El validador verifica que el tema sea compatible con WordPress:
 🏁 Estado final: ✅ VÁLIDO PARA WORDPRESS
 ```
 
-### Validación de Sintaxis PHP
+### 2. Validación de Sintaxis PHP
 
 Adicionalmente, se valida la sintaxis PHP de todos los archivos:
 
@@ -149,6 +154,41 @@ Adicionalmente, se valida la sintaxis PHP de todos los archivos:
 📈 Tasa de éxito: 100.0%
 
 🎉 ¡Todos los archivos PHP tienen sintaxis correcta!
+```
+
+### 3. 🆕 Validación WordPress URL Testing
+
+**Sistema completo de testing contra WordPress en vivo:**
+
+```bash
+npm run wp:test-urls
+```
+
+**Valida 20 WordPress Best Practices:**
+- 🔒 **Seguridad**: Escape de datos, sanitización, nonces, consultas preparadas
+- ⚡ **Rendimiento**: wp_enqueue_*, lazy loading, preload, cache  
+- 📊 **SEO**: Meta tags, OpenGraph, JSON-LD, canonical
+- 🔧 **Estructura**: wp_head(), wp_footer(), language_attributes()
+- ♿ **Accesibilidad**: Alt text, ARIA labels
+- 📱 **Móvil**: Meta viewport
+
+**Ejemplo de reporte:**
+```bash
+🎯 WordPress URL Tester
+📋 URLs a probar: 7
+
+🔗 http://localhost/carreras/
+   ✅ SEO Manager: PASS
+   ✅ Asset Manager: PASS  
+   ✅ Analytics Manager: PASS
+   ✅ Template Manager: PASS
+   ✅ Component Manager: PASS
+
+📋 RESUMEN BEST PRACTICES
+🎯 Score general: 85.2%
+🚨 Issues críticos: 0
+✅ Prácticas evaluadas: 20
+🎉 EXCELENTE: WordPress best practices bien implementadas
 ```
 
 ### Manejo de Errores

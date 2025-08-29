@@ -72,13 +72,17 @@ function ${this.functionPrefix}_enqueue_assets() {
         $assets_available = json_decode($manifest_content, true);
     }
     
-    // CSS - Encolar usando nombres reales del manifest
+    // CSS - Encolar usando nombres reales del manifest con preload
     if (isset($assets_available['css'])) {
         foreach ($assets_available['css'] as $asset_key => $filename) {
             if ($asset_key === 'design-tokens') {
                 wp_enqueue_style('${this.enqueueHandle}-tokens', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
+                // Preload design tokens como critical CSS
+                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
             } elseif (strpos($asset_key, '${this.enqueueHandle}') === 0) {
                 wp_enqueue_style('${this.enqueueHandle}-main', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
+                // Preload main CSS como critical
+                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
             }
         }
     }

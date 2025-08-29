@@ -1,14 +1,15 @@
 const fs = require('fs');
 const path = require('path');
-const ComponentGenerator = require('./component-generator');
-const TemplateBuilder = require('./template-builder');
-const AssetManager = require('./asset-manager');
-const ThemeStructure = require('./theme-structure');
-const GenerationValidator = require('./validator');
-const SEOManager = require('./seo-manager');
-const ValidationManager = require('./validation-manager');
-const PHPValidator = require('./php-validator');
-const ConfigManager = require('./config-manager');
+const ComponentGenerator = require('./managers/component-generator');
+const TemplateBuilder = require('./managers/template-builder');
+const AssetManager = require('./managers/asset-manager');
+const ThemeStructure = require('./managers/theme-structure');
+const GenerationValidator = require('./validation/validator');
+const SEOManager = require('./managers/seo-manager');
+const AnalyticsManager = require('./managers/analytics-manager');
+const ValidationManager = require('./validation/validation-manager');
+const PHPValidator = require('./validation/php-validator');
+const ConfigManager = require('./core/config-manager');
 
 class WordPressGenerator {
   constructor(customConfig = {}) {
@@ -94,7 +95,11 @@ class WordPressGenerator {
       // 5. Generar sistema SEO dinámico
       this.seoManager.generate();
       
-      // 6. Ejecutar validación y generar fallbacks
+      // 6. Generar sistema de Analytics (GA4, eventos, data layer)
+      const analyticsManager = new AnalyticsManager(this.config);
+      analyticsManager.generateAnalyticsFile();
+      
+      // 7. Ejecutar validación y generar fallbacks
       const isValid = this.validationManager.validateGeneration();
       
       // 7. Validar generación final

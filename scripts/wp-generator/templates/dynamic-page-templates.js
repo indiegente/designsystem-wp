@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const ComponentGenerator = require('../component-generator');
+const ComponentGenerator = require('../managers/component-generator');
 
 class DynamicPageTemplates {
   constructor(config) {

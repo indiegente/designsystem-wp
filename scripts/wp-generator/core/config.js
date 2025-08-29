@@ -74,6 +74,24 @@ module.exports = {
     defaultDescription: 'Instituto de educación superior especializado en diseño, tecnología y creatividad.'
   },
 
+  // Configuración Analytics
+  analytics: {
+    enabled: true,
+    googleAnalytics: {
+      measurementId: 'G-XXXXXXXXXX', // Cambiar por ID real
+      enabled: true
+    },
+    facebookPixel: {
+      pixelId: '',
+      enabled: false
+    },
+    customEvents: {
+      pageViews: true,
+      componentViews: true,
+      interactions: true
+    }
+  },
+
   // Configuración de validación
   validation: {
     php: {

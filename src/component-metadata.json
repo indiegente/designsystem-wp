@@ -76,7 +76,11 @@
       { "name": "cta_text", "type": "string", "default": "" },
       { "name": "background_image", "type": "string", "default": "" }
     ],
-    "template": "hero-section"
+    "template": "hero-section",
+    "performance": {
+      "lazyLoading": false,
+      "preloadImages": true
+    }
   },
   "course-card": {
     "type": "iterative",
@@ -92,6 +96,10 @@
     "iteration": {
       "mode": "individual",
       "renderPerItem": true
+    },
+    "performance": {
+      "lazyLoading": true,
+      "preloadImages": false
     }
   },
   "testimonials": {
@@ -109,13 +117,26 @@
         "name": "post_title",
         "role": "post_excerpt", 
         "content": "post_content",
-        "rating": "meta_rating",
-        "avatar": "meta_avatar",
-        "course": "meta_course"
+        "rating": {
+          "source": "meta_rating",
+          "type": "native"
+        },
+        "avatar": {
+          "source": "meta_avatar", 
+          "type": "acf"
+        },
+        "course": {
+          "source": "meta_course",
+          "type": "acf"
+        }
       },
       "defaultValues": {
         "rating": 5
       }
+    },
+    "performance": {
+      "lazyLoading": true,
+      "preloadImages": false
     }
   },
   "feature-grid": {
@@ -132,7 +153,10 @@
       "dataStructure": {
         "title": "post_title",
         "description": "post_content",
-        "icon": "meta_icon"
+        "icon": {
+          "source": "meta_icon",
+          "type": "acf"
+        }
       },
       "defaultValues": {
         "icon": "✨"

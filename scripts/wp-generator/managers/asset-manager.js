@@ -25,7 +25,7 @@ class AssetManager {
     console.log('📦 Construyendo assets optimizados...');
     
     try {
-      // Intentar build de Vite, pero continuar si falla
+      // Intentar build de Vite, pero continuar con fallback si falla
       const viteBuildSuccess = this.buildViteAssets();
       
       if (viteBuildSuccess) {
@@ -37,11 +37,13 @@ class AssetManager {
         this.generateAssetEnqueueFile();
         this.generateAvailableAssetsManifest(true);
       } else {
-        throw new Error('Assets build failed - Node.js version incompatible or Vite configuration error');
+        console.log('🔧 Usando modo fallback para assets...');
+        this.generateFallbackAssets();
       }
     } catch (error) {
       console.error('❌ Error construyendo assets:', error.message);
-      throw error; // Propagar el error para que el generador principal decida
+      console.log('🔧 Intentando modo fallback...');
+      this.generateFallbackAssets();
     }
   }
 

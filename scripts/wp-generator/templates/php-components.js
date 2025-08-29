@@ -213,6 +213,12 @@ add_action('wp_head', function() {
     // Luego convertir interpolaciones simples restantes
     phpTemplate = this.convertSimpleInterpolations(phpTemplate);
     
+    // Agregar lazy loading basado en metadata del componente
+    const componentMetadata = this.metadata[componentName];
+    if (componentMetadata?.performance?.lazyLoading) {
+      phpTemplate = phpTemplate.replace(/<img([^>]*?)(?!\s+loading=)/g, '<img$1 loading="lazy"');
+    }
+    
     return phpTemplate;
   }
   

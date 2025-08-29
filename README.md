@@ -40,16 +40,29 @@ toulouse-design-system/
 │   │   └── generate-wp-templates.js    # Generador principal
 │   ├── validation/             # Validación y testing
 │   │   └── validate-wp-theme.js        # Validador de temas
-│   └── wp-generator/           # Generador WordPress
-│       ├── component-generator.js      # Conversión Lit → PHP
-│       ├── template-builder.js         # Plantillas WordPress
-│       ├── asset-manager.js            # Gestión de assets
-│       ├── extension-manager.js        # Sistema de extensiones
-│       ├── seo-manager.js             # SEO dinámico
-│       ├── validation-manager.js       # Validaciones avanzadas
-│       ├── config-manager.js          # Configuración dinámica
-│       ├── php-validator.js           # Validación PHP en tiempo real
-│       └── templates/                 # Templates PHP generados
+│   └── wp-generator/           # Generador WordPress (Reorganizado)
+│       ├── core/               # Archivos principales
+│       │   ├── config.js              # Configuración central con Analytics
+│       │   └── index.js               # Entry point principal
+│       ├── managers/           # Gestores especializados
+│       │   ├── asset-manager.js       # Gestión de assets
+│       │   ├── analytics-manager.js   # **NUEVO** - Analytics separado de SEO
+│       │   ├── seo-manager.js         # SEO dinámico puro
+│       │   └── config-manager.js      # Configuración dinámica
+│       ├── validation/         # Sistema de validación
+│       │   ├── validation-manager.js  # Validaciones avanzadas
+│       │   └── php-validator.js       # Validación PHP en tiempo real
+│       ├── templates/          # Sistema de templates
+│       │   ├── component-generator.js # Conversión Lit → PHP
+│       │   ├── template-builder.js    # Plantillas WordPress
+│       │   └── php-components.js      # Generador PHP components
+│       ├── extensions/         # **NUEVO** - Sistema de extensiones
+│       │   ├── extension-manager.js   # Gestor de extensiones
+│       │   └── analytics/             # Extensiones de Analytics
+│       │       ├── ga4-data-layer.js      # Google Analytics 4 Data Layer
+│       │       ├── facebook-pixel.js      # Facebook Pixel integration
+│       │       └── custom-events.js       # Eventos personalizados
+│       └── legacy/             # Archivos legacy (deprecados)
 ├── dist/                    # Build de Vite
 ├── wordpress-output/        # Tema WordPress generado
 └── storybook-static/        # Documentación
@@ -355,6 +368,101 @@ static styles = css`
 
 ## ⚙️ Configuración
 
+### Configuración Central (`scripts/wp-generator/core/config.js`)
+
+Configuración centralizada del sistema con Analytics integrado:
+
+```javascript
+export const config = {
+  theme: {
+    name: 'toulouse-lautrec',
+    displayName: 'Toulouse Lautrec - Design System',
+    description: 'Sistema de diseño modular basado en componentes Lit',
+    version: '1.0.0',
+    author: 'Toulouse Lautrec'
+  },
+  
+  // **NUEVO** - Configuración de Analytics separada de SEO
+  analytics: {
+    enabled: true,
+    googleAnalytics: {
+      measurementId: 'G-XXXXXXXXXX', // Configurar GA4 ID
+      enabled: true,
+      enhancedEcommerce: true,
+      dataLayer: {
+        courseViews: true,
+        testimonialViews: true,
+        ctaClicks: true
+      }
+    },
+    facebookPixel: {
+      pixelId: '', // Configurar Facebook Pixel ID
+      enabled: false
+    },
+    customEvents: {
+      pageViews: true,
+      componentViews: true,
+      interactions: true,
+      performanceTracking: true // Web vitals (LCP, FID, CLS)
+    }
+  },
+  
+  seo: {
+    siteName: 'Toulouse Lautrec',
+    siteDescription: 'Institución educativa especializada en diseño, tecnología y creatividad',
+    author: 'Toulouse Lautrec',
+    twitterCard: 'summary_large_image'
+  },
+  
+  wordpress: {
+    outputDir: './wordpress-output',
+    assetsDir: './dist',
+    validation: {
+      enabled: true,
+      phpSyntax: true,
+      failFast: true
+    }
+  }
+};
+```
+
+### Configuración de Performance (component-metadata.json)
+
+Cada componente puede tener configuración específica de performance:
+
+```json
+{
+  "course-card": {
+    "type": "iterative",
+    "phpFunction": "render_course_card",
+    "performance": {
+      "lazyLoading": true,        // **NUEVO** - Lazy loading configurado
+      "preloadImages": false,     // No precarga imágenes
+      "deferScript": true         // Defer JavaScript loading
+    },
+    "analytics": {
+      "trackViews": true,          // **NUEVO** - Tracking de vistas
+      "trackClicks": true,        // Tracking de clicks
+      "category": "course_engagement"
+    }
+  },
+  "hero-section": {
+    "type": "static",
+    "phpFunction": "render_hero_section", 
+    "performance": {
+      "lazyLoading": false,       // No lazy loading para hero
+      "preloadImages": true,      // Precarga imágenes críticas
+      "criticalCSS": true         // CSS crítico inline
+    },
+    "analytics": {
+      "trackViews": true,
+      "trackCTAs": true,          // Tracking específico de CTAs
+      "category": "hero_engagement"
+    }
+  }
+}
+```
+
 ### Configuración de Páginas (`page-templates.json`)
 
 Define la estructura de páginas WordPress con componentes:
@@ -489,7 +597,9 @@ wordpress-output/toulouse-lautrec/
 │   └── testimonials/
 │       └── testimonials.php          # Con conversión Lit → PHP
 ├── inc/
-│   ├── seo-manager.php               # SEO dinámico con JSON-LD
+│   ├── seo-manager.php               # SEO dinámico puro (sin Analytics)
+│   ├── analytics-manager.php         # **NUEVO** - Analytics separado
+│   ├── validation.php                # Sistema de validación
 │   └── asset-enqueue.php             # Carga optimizada de assets
 ├── functions.php                     # Con configuración dinámica
 ├── index.php
@@ -610,9 +720,22 @@ function toulouse_register_post_types() {
 add_action('init', 'toulouse_register_post_types');
 ```
 
-### 🆕 SEO Dinámico y Analytics
+### 🆕 SEO Dinámico y Analytics Manager Separado
 
-El sistema incluye un **SEO Manager** completamente automático que genera:
+El sistema incluye **SEO Manager** y **Analytics Manager** como sistemas independientes con responsabilidades específicas:
+
+#### 📊 Analytics Manager (Nuevo)
+- **Google Analytics 4** configurado desde `config.js`
+- **Extensiones modulares** para diferentes plataformas (GA4, Facebook, Custom Events)
+- **Data Layer mapping** avanzado para medición educativa
+- **Performance tracking** y eventos de conversión
+- **Lazy loading** configurado desde component metadata
+
+#### 🔍 SEO Manager (Refactorizado)
+- **Responsabilidad única**: Meta tags y structured data
+- **SEO dinámico** puro sin lógica de Analytics
+- **JSON-LD estructurado** por template
+- **Meta tags específicos** por página
 
 #### ✅ Meta Tags Dinámicos por Template
 ```json
@@ -673,6 +796,95 @@ El sistema incluye un **SEO Manager** completamente automático que genera:
   }
 ]
 </script>
+```
+
+#### ✅ Analytics Manager - GA4 Integration
+```php
+// inc/analytics-manager.php - Analytics separado
+class AnalyticsManager {
+    private $config;
+    
+    public function __construct($analytics_config) {
+        $this->config = $analytics_config;
+    }
+    
+    public function generateGA4Script() {
+        if (!$this->config['googleAnalytics']['enabled']) {
+            return '';
+        }
+        
+        $measurement_id = $this->config['googleAnalytics']['measurementId'];
+        $script = '<script async src="https://www.googletagmanager.com/gtag/js?id=' . $measurement_id . '"></script>';
+        $script .= '<script>';
+        $script .= 'window.dataLayer = window.dataLayer || [];';
+        $script .= 'function gtag(){dataLayer.push(arguments);}';
+        $script .= 'gtag("js", new Date());';
+        $script .= 'gtag("config", "' . $measurement_id . '", {';
+        $script .= '  enhanced_ecommerce: true,';
+        $script .= '  track_page_view: true';
+        $script .= '});';
+        $script .= '</script>';
+        
+        return $script;
+    }
+    
+    public function generateDataLayer() {
+        // Extensiones de Data Layer desde extensions/analytics/
+        return $this->loadAnalyticsExtensions();
+    }
+}
+```
+
+#### ✅ Extensiones de Analytics
+```javascript
+// extensions/analytics/ga4-data-layer.js
+const GA4DataLayer = {
+    // Eventos educativos específicos
+    trackCourseView: (courseData) => {
+        gtag('event', 'course_view', {
+            event_category: 'education',
+            course_name: courseData.title,
+            course_category: courseData.category,
+            custom_parameter_1: 'toulouse_lautrec'
+        });
+    },
+    
+    trackTestimonialInteraction: (testimonialData) => {
+        gtag('event', 'testimonial_engagement', {
+            event_category: 'social_proof',
+            testimonial_author: testimonialData.name,
+            testimonial_course: testimonialData.course
+        });
+    },
+    
+    // Performance tracking
+    trackWebVitals: () => {
+        // LCP, FID, CLS tracking automático
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                gtag('event', 'web_vitals', {
+                    event_category: 'performance',
+                    metric_name: entry.entryType,
+                    metric_value: Math.round(entry.startTime)
+                });
+            }
+        }).observe({entryTypes: ['largest-contentful-paint', 'first-input', 'cumulative-layout-shift']});
+    }
+};
+```
+
+#### ✅ Configuración sin Hardcoding
+```javascript
+// Antes (Hardcoded)
+if (componentName !== 'hero-section') {
+    // Lazy loading hardcoded
+}
+
+// Después (Metadata-driven)
+const componentMetadata = getComponentMetadata(componentName);
+if (componentMetadata?.performance?.lazyLoading) {
+    // Lazy loading configurado desde metadata
+}
 ```
 
 #### ✅ Detección Automática de Templates
@@ -1041,6 +1253,7 @@ Este proyecto está bajo la licencia MIT. Ver `LICENSE` para más detalles.
 
 **📚 Documentación del Proyecto:**
 - **[🆕 Guía de Mocks Personalizados](./CUSTOM_MOCKS_GUIDE.md)** - Cómo crear datos de ejemplo personalizados
+- **[📊 Analytics Manager Guide](./ANALYTICS_MANAGER_GUIDE.md)** - **NUEVO** - Sistema de Analytics separado del SEO
 - [📚 Generador de Stories](./STORIES_GENERATOR_GUIDE.md) - Sistema automático de generación de stories  
 - [🎯 Tutorial End-to-End](./TUTORIAL_END_TO_END.md) - De Lit Component a WordPress
 - [🧩 Guía de Extensiones](./EXTENSIONS_GUIDE.md) - Extensiones para WordPress

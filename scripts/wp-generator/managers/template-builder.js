@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const WpTemplates = require('./templates/wp-templates');
-const FunctionsTemplate = require('./templates/functions-template');
-const PHPValidator = require('./php-validator');
+const WpTemplates = require('../templates/wp-templates');
+const FunctionsTemplate = require('../templates/functions-template');
+const PHPValidator = require('../validation/php-validator');
 
 class TemplateBuilder {
   constructor(config) {
