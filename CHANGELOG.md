@@ -5,7 +5,85 @@ Todas las mejoras notables de este proyecto estarán documentadas en este archiv
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.3.0] - 2025-01-29
+
+### 🆕 Conversión Avanzada Lit → PHP
+
+#### Added
+- **Conversión automática de métodos JavaScript** como `renderStars()` a PHP loops
+- **Manejo inteligente de condicionales complejos** con templates anidados (`${item.prop ? html`...` : html`...`}`)
+- **Conversión de arrays y map()** a foreach PHP con validaciones automáticas
+- **Escape automático según contexto** (esc_html, esc_url, esc_attr) 
+- **Detección de métodos como charAt().toUpperCase()** y conversión a PHP nativo
+- **Conversión genérica de templates** sin hardcode específico por componente
+
+#### Fixed
+- **Templates testimonials** ya no muestran `${this.renderStars(testimonial.rating)}` literal
+- **Condicionales complejos con avatars** se convierten correctamente a PHP
+- **Métodos JavaScript** se convierten a PHP inline apropiadamente
+- **Template strings** de Lit se convierten completamente a PHP válido
+
+### 🆕 SEO Dinámico Completo
+
+#### Added
+- **SEO Manager** completamente automático con detección inteligente de templates
+- **Meta tags específicos por página** usando configuración desde `seo-config.json`
+- **JSON-LD estructurado automático** con Schema.org (Organization, Course, Review)
+- **Detección robusta de template** usando `global $template` con múltiples fallbacks
+- **Meta tags OpenGraph y Twitter Cards** completamente configurados
+- **Canonical URLs y robots meta** automáticos por página
+
+#### Fixed
+- **SEO Manager detección de templates** ahora usa `getCurrentTemplateSlug()` correctamente
+- **Meta tags específicos por template** se cargan sin errores
+- **JSON-LD estructurado** se genera apropiadamente para cada tipo de página
+- **Template slug detection** funciona con Template Name y file-based templates
+
+### 🛠️ Configuración Client-Agnostic
+
+#### Added
+- **ConfigManager dinámico** que lee configuración del proyecto automáticamente
+- **Detección automática de nombre** del proyecto desde package.json
+- **Variables de entorno soportadas** para override de configuración
+- **Prefijos dinámicos** generados automáticamente sin hardcode
+- **Generación completamente adaptable** a cualquier proyecto
+
+#### Enhanced
+- **Asset Management mejorado** con ES6 modules preferidos sobre UMD
+- **Single script loading** para evitar conflictos de custom elements
+- **Asset manifest con hashes únicos** para cache busting eficiente
+
+### 🏗️ Reorganización de Arquitectura
+
+#### Changed
+- **Scripts organizados** en subdirectorios por funcionalidad:
+  - `scripts/storybook/` - Herramientas de Storybook
+  - `scripts/config/` - Configuración y builds
+  - `scripts/validation/` - Validación y testing
+  - `scripts/wp-generator/` - Generador WordPress
+- **Package.json actualizado** con nuevas rutas organizadas
+- **Compatibilidad mantenida** con comandos npm existentes
+
+#### Fixed
+- **Node.js 24 compatibility** completamente implementada
+- **Vite 7 support** con regeneración de node_modules
+- **Script paths actualizados** para nueva estructura organizacional
+
+### 🔧 Asset Management
+
+#### Enhanced  
+- **ES6 modules preferidos** sobre UMD para mejor compatibilidad con browsers modernos
+- **Detección automática de assets** con preferencia por versiones ES6
+- **Single script loading** implementado para evitar conflictos de custom elements
+- **Type="module" attributes** añadidos automáticamente para ES6 scripts
+- **Asset manifest coordination** entre Vite builds y WordPress templates
+
+#### Fixed
+- **Duplicate script loading** que causaba errores de custom element registry
+- **JavaScript module loading** errors con "Unexpected token 'export'"
+- **Asset file name resolution** usando manifest dinámico en lugar de hardcode
+
+## [v1.2.x] - Versiones Anteriores
 
 ### 🔒 Sistema de Validación PHP Completo
 

@@ -6,7 +6,8 @@
         "singular_name": "Carrera"
       },
       "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"]
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
     },
     "testimonio": {
       "labels": {

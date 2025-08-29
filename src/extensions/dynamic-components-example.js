@@ -101,7 +101,7 @@ module.exports = function(config) {
         
         <script>
         function toggleItem(id) {
-          const item = document.querySelector('[data-id="' + id + '"]');
+          const item = document.querySelector(`[data-id="${id}"]`);
           const content = item.querySelector('.interactive-content');
           content.style.display = content.style.display === 'none' ? 'block' : 'none';
         }

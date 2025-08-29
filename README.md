@@ -32,15 +32,24 @@ toulouse-design-system/
 │   ├── page-templates.json   # Configuración de páginas
 │   └── index.js             # Entry point
 ├── scripts/
-│   ├── wp-generator/        # Generador WordPress
-│   │   ├── component-generator.js  # Generación y conversión unificada
-│   │   ├── template-builder.js     # Plantillas WordPress
-│   │   ├── asset-manager.js        # Gestión de assets
-│   │   ├── extension-manager.js    # Sistema de extensiones
-│   │   ├── seo-manager.js         # SEO dinámico
-│   │   ├── validation-manager.js   # Validaciones avanzadas
-│   │   └── templates/             # Templates PHP
-│   └── generate-wp-templates.js
+│   ├── storybook/              # Herramientas de Storybook
+│   │   ├── generate-stories-robust.js  # Generador robusto con mocks
+│   │   ├── generate-stories.js         # Generador básico
+│   │   └── test-story-generator.js     # Testing del generador
+│   ├── config/                 # Configuración y builds
+│   │   └── generate-wp-templates.js    # Generador principal
+│   ├── validation/             # Validación y testing
+│   │   └── validate-wp-theme.js        # Validador de temas
+│   └── wp-generator/           # Generador WordPress
+│       ├── component-generator.js      # Conversión Lit → PHP
+│       ├── template-builder.js         # Plantillas WordPress
+│       ├── asset-manager.js            # Gestión de assets
+│       ├── extension-manager.js        # Sistema de extensiones
+│       ├── seo-manager.js             # SEO dinámico
+│       ├── validation-manager.js       # Validaciones avanzadas
+│       ├── config-manager.js          # Configuración dinámica
+│       ├── php-validator.js           # Validación PHP en tiempo real
+│       └── templates/                 # Templates PHP generados
 ├── dist/                    # Build de Vite
 ├── wordpress-output/        # Tema WordPress generado
 └── storybook-static/        # Documentación
@@ -91,9 +100,9 @@ npm run storybook        # Documentación interactiva
 npm run build-storybook  # Build de Storybook
 
 # WordPress
-npm run wp:generate      # Generar tema WordPress
+npm run wp:generate      # Generar tema WordPress completo
 npm run wp:validate      # Validar tema generado
-npm run wp:validate-php  # Validar sintaxis PHP de forma interactiva
+npm run wp:validate-php  # Validar sintaxis PHP interactiva
 
 # Stories (ACTUALIZADO)
 npm run stories:generate        # Generador básico (legacy)
@@ -448,13 +457,15 @@ Define la configuración completa del sistema:
 
 ### Proceso de Generación
 
-1. **Limpieza**: Elimina el directorio de salida anterior
-2. **Estructura**: Crea la estructura del tema WordPress
-3. **Conversión**: Convierte componentes Lit a PHP
-4. **Assets**: Construye y copia CSS/JS
-5. **Templates**: Genera plantillas de página
-6. **Validación Completa**: Verifica integridad y sintaxis PHP
-7. **Reporte**: Genera reportes de validación detallados
+1. **Limpieza**: Elimina completamente el directorio de salida anterior
+2. **Configuración**: Detecta configuración dinámica del proyecto (ConfigManager)
+3. **Estructura**: Crea la estructura del tema WordPress
+4. **Conversión**: Convierte componentes Lit a PHP con manejo avanzado de templates
+5. **Assets**: Construye con Vite y optimiza CSS/JS 
+6. **Templates**: Genera plantillas de página con SEO dinámico
+7. **Validación Completa**: Verifica integridad y sintaxis PHP en tiempo real
+8. **SEO**: Genera meta tags y JSON-LD específicos por template
+9. **Reporte**: Genera reportes de validación detallados con estadísticas
 
 ### Estructura del Tema Generado
 
@@ -464,20 +475,108 @@ wordpress-output/toulouse-lautrec/
 │   ├── css/
 │   │   ├── design-tokens.css
 │   │   └── toulouse-design-system-[hash].css
-│   └── js/
-│       └── toulouse-ds.[format].js
+│   ├── js/
+│   │   ├── toulouse-ds.es.js          # ES6 modules (preferido)
+│   │   └── toulouse-ds.umd.js         # UMD fallback
+│   ├── seo-config.json                # Configuración SEO por template
+│   ├── asset-manifest.json            # Manifest de assets con hashes
+│   └── validation-rules.json          # Reglas de validación
 ├── components/
 │   ├── hero-section/
 │   │   └── hero-section.php
 │   ├── course-card/
 │   │   └── course-card.php
 │   └── testimonials/
-│       └── testimonials.php
-├── functions.php
+│       └── testimonials.php          # Con conversión Lit → PHP
+├── inc/
+│   ├── seo-manager.php               # SEO dinámico con JSON-LD
+│   └── asset-enqueue.php             # Carga optimizada de assets
+├── functions.php                     # Con configuración dinámica
 ├── index.php
 ├── front-page.php
-├── page-carreras.php
+├── page-carreras.php                 # Con SEO específico
 └── style.css
+```
+
+### 🆕 Conversión Avanzada Lit → PHP
+
+El sistema incluye conversión automática de templates Lit a PHP con manejo inteligente de:
+
+#### ✅ Métodos JavaScript
+```javascript
+// Lit Component
+renderStars(rating) {
+  const stars = [];
+  for (let i = 1; i <= 5; i++) {
+    stars.push(html`<span class="star">${i <= rating ? '★' : '☆'}</span>`);
+  }
+  return stars;
+}
+
+render() {
+  return html`
+    <div class="rating">
+      ${this.renderStars(testimonial.rating)}
+    </div>
+  `;
+}
+```
+
+```php
+<!-- PHP Generado Automáticamente -->
+<div class="rating">
+  <?php for ($i = 1; $i <= 5; $i++): ?>
+    <span class="star"><?php echo $i <= $item['rating'] ? '★' : '☆'; ?></span>
+  <?php endfor; ?>
+</div>
+```
+
+#### ✅ Condicionales Complejos
+```javascript
+// Lit Component
+${testimonial.avatar ? html`
+  <img src="${testimonial.avatar}" alt="${testimonial.name}" class="author-avatar" />
+` : html`
+  <div class="author-avatar" style="background: var(--tl-primary-500);">
+    ${testimonial.name.charAt(0).toUpperCase()}
+  </div>
+`}
+```
+
+```php
+<!-- PHP Generado Automáticamente -->
+<?php if (!empty($item['avatar'])): ?>
+  <img src="<?php echo esc_url($item['avatar']); ?>" alt="<?php echo esc_attr($item['name']); ?>" class="author-avatar" />
+<?php else: ?>
+  <div class="author-avatar" style="background: var(--tl-primary-500); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+    <?php echo esc_html(strtoupper(substr($item['name'], 0, 1))); ?>
+  </div>
+<?php endif; ?>
+```
+
+#### ✅ Arrays y Loops
+```javascript
+// Lit Component
+${this.testimonials.map(testimonial => html`
+  <div class="testimonial-card">
+    <p class="testimonial-content">"${testimonial.content}"</p>
+    <div class="author-name">${testimonial.name}</div>
+  </div>
+`)}
+```
+
+```php
+<!-- PHP Generado Automáticamente -->
+<?php if (!empty($testimonials)): ?>
+  <?php foreach ($testimonials as $item): ?>
+    <div class="testimonial-card">
+      <p class="testimonial-content">"<?php echo esc_html($item['content']); ?>"</p>
+      <div class="author-name"><?php echo esc_html($item['name']); ?></div>
+    </div>
+  <?php endforeach; ?>
+<?php else: ?>
+  <p>No hay elementos disponibles.</p>
+<?php endif; ?>
 ```
 
 ### Custom Post Types
@@ -511,28 +610,89 @@ function toulouse_register_post_types() {
 add_action('init', 'toulouse_register_post_types');
 ```
 
-### SEO y Analytics
+### 🆕 SEO Dinámico y Analytics
 
-El sistema genera automáticamente SEO y analytics por plantilla:
+El sistema incluye un **SEO Manager** completamente automático que genera:
 
+#### ✅ Meta Tags Dinámicos por Template
+```json
+// assets/seo-config.json (generado automáticamente)
+{
+  "templates": {
+    "page-carreras": {
+      "title": "Carreras Técnicas | Toulouse Lautrec",
+      "description": "Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.",
+      "keywords": "carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec",
+      "ogType": "website",
+      "schema": {
+        "type": "Course",
+        "provider": {
+          "type": "Organization", 
+          "name": "Toulouse Lautrec"
+        }
+      }
+    }
+  }
+}
+```
+
+#### ✅ Meta Tags HTML Generados
+```html
+<!-- HTML generado automáticamente en <head> -->
+<meta name="description" content="Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.">
+<meta name="keywords" content="carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec">
+<meta property="og:title" content="Carreras Técnicas | Toulouse Lautrec">
+<meta property="og:description" content="Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://localhost/carreras/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="http://localhost/carreras/">
+```
+
+#### ✅ JSON-LD Estructurado
+```html
+<!-- Script JSON-LD generado automáticamente -->
+<script type="application/ld+json">
+[
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Toulouse Lautrec",
+    "url": "http://localhost",
+    "description": "Institución educativa especializada en diseño, tecnología y creatividad"
+  },
+  {
+    "@context": "https://schema.org", 
+    "@type": "Course",
+    "name": "Nuestras Carreras",
+    "description": "Descubre tu potencial creativo con nuestras carreras técnicas",
+    "provider": {
+      "type": "Organization",
+      "name": "Toulouse Lautrec"
+    }
+  }
+]
+</script>
+```
+
+#### ✅ Detección Automática de Templates
 ```php
-function toulouse_page_seo_analytics() {
-    if (!is_page()) return;
+// inc/seo-manager.php - Detección inteligente
+private function getCurrentTemplateSlug() {
+    global $template;
     
-    $page_template = get_page_template_slug();
+    // Detecta automáticamente el template actual
+    if ($template) {
+        return basename($template, '.php'); // page-carreras
+    }
     
-    $seo_config = array(
-        'page-carreras' => array(
-            'title' => 'Carreras | Toulouse Lautrec',
-            'description' => 'Explora nuestras carreras técnicas',
-            'analytics' => array(
-                'pageView' => 'page_view_carreras',
-                'events' => array(...)
-            )
-        )
-    );
+    // Múltiples fallbacks para máxima compatibilidad
+    $template_slug = get_page_template_slug();
+    if ($template_slug) {
+        return basename($template_slug, '.php');
+    }
     
-    // Aplicar configuración según plantilla
+    return '';
 }
 ```
 
@@ -558,6 +718,9 @@ npm run wp:generate
 - ✅ **Protección contra errores runtime** comunes
 - ✅ **Limpieza CSS mejorada** (remoción de `:host` y Web Components)
 - ✅ **Detección de conflictos JavaScript/PHP** en templates
+- ✅ **Conversión automática Lit → PHP** con manejo de métodos y condicionales
+- ✅ **SEO dinámico** con meta tags específicos por template
+- ✅ **Configuración client-agnostic** usando ConfigManager
 
 #### 🛠️ Validación Interactiva
 

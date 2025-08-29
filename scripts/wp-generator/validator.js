@@ -179,8 +179,11 @@ class GenerationValidator {
     if (fs.existsSync(functionsPath)) {
       const content = fs.readFileSync(functionsPath, 'utf8');
       
-      if (!content.includes('toulouse_theme_setup')) {
-        this.errors.push('❌ Función theme_setup faltante en functions.php');
+      // Buscar función theme_setup con prefijo dinámico
+      const functionPrefix = this.config.phpFunctionPrefix || 'theme';
+      const themeSetupFunction = `${functionPrefix}_theme_setup`;
+      if (!content.includes(themeSetupFunction)) {
+        this.errors.push(`❌ Función ${themeSetupFunction} faltante en functions.php`);
       }
       
       if (!content.includes('wp_enqueue_style')) {

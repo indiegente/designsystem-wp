@@ -1,4 +1,4 @@
-const WordPressGenerator = require('./wp-generator');
+const WordPressGenerator = require('../wp-generator/index.js');
 
 // Ejecutar el generador
 const generator = new WordPressGenerator({

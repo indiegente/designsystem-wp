@@ -25,20 +25,34 @@ class AssetManager {
     console.log('📦 Construyendo assets optimizados...');
     
     try {
-      this.buildViteAssets();
-      this.generateAssetManifest();
-      this.optimizeAssets();
-      this.copyDesignTokens();
-      this.copyViteAssets();
-      this.generateAssetConfig();
-      this.generateAssetEnqueueFile();
+      // Intentar build de Vite, pero continuar si falla
+      const viteBuildSuccess = this.buildViteAssets();
+      
+      if (viteBuildSuccess) {
+        this.generateAssetManifest();
+        this.optimizeAssets();
+        this.copyViteAssets();
+        this.copyDesignTokens();
+        this.generateAssetConfig();
+        this.generateAssetEnqueueFile();
+        this.generateAvailableAssetsManifest(true);
+      } else {
+        throw new Error('Assets build failed - Node.js version incompatible or Vite configuration error');
+      }
     } catch (error) {
       console.error('❌ Error construyendo assets:', error.message);
+      throw error; // Propagar el error para que el generador principal decida
     }
   }
 
   buildViteAssets() {
-    execSync('npm run build', { stdio: 'inherit' });
+    try {
+      execSync('npm run build', { stdio: 'inherit' });
+      return true;
+    } catch (error) {
+      console.log('⚠️ Error en build de Vite:', error.message);
+      return false;
+    }
   }
 
   /**
@@ -206,6 +220,105 @@ class AssetManager {
     );
 
     this.copyDirectory(distDir, targetAssetsDir);
+  }
+
+  /**
+   * Genera un manifest de assets disponibles para que los templates PHP lo consulten
+   */
+  generateAvailableAssetsManifest(viteBuildSuccess) {
+    const manifestPath = path.join(
+      this.config.outputDir,
+      this.config.themeName,
+      'assets',
+      'available-assets.json'
+    );
+
+    // Verificar qué assets realmente existen
+    const assetsDir = path.join(this.config.outputDir, this.config.themeName, 'assets');
+    const cssDir = path.join(assetsDir, 'css');
+    const jsDir = path.join(assetsDir, 'js');
+
+    const availableAssets = {
+      buildSuccess: viteBuildSuccess,
+      timestamp: new Date().toISOString(),
+      css: this.getAvailableCSSFiles(cssDir, viteBuildSuccess),
+      js: this.getAvailableJSFiles(jsDir, viteBuildSuccess)
+    };
+
+    // Crear directorio si no existe
+    if (!fs.existsSync(path.dirname(manifestPath))) {
+      fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+    }
+
+    fs.writeFileSync(manifestPath, JSON.stringify(availableAssets, null, 2));
+    console.log('✅ Manifest de assets disponibles generado');
+  }
+
+  /**
+   * Obtiene archivos CSS reales con sus nombres exactos
+   */
+  getAvailableCSSFiles(cssDir, viteBuildSuccess) {
+    const cssFiles = {};
+    
+    // Design tokens (siempre intentar copiar)
+    const tokensPath = path.join(cssDir, 'design-tokens.css');
+    if (fs.existsSync(tokensPath)) {
+      cssFiles['design-tokens'] = 'design-tokens.css';
+    }
+    
+    // Archivos CSS de Vite (solo si build exitoso)
+    if (viteBuildSuccess && fs.existsSync(cssDir)) {
+      const files = fs.readdirSync(cssDir);
+      files.forEach(file => {
+        if (file.endsWith('.css') && file !== 'design-tokens.css') {
+          // Determinar el tipo de archivo CSS basado en su nombre
+          if (file.includes('index') || file.includes('main')) {
+            cssFiles['main'] = file;
+          } else {
+            cssFiles[file.replace('.css', '')] = file;
+          }
+        }
+      });
+    }
+    
+    return cssFiles;
+  }
+
+  /**
+   * Obtiene archivos JS reales con sus nombres exactos
+   */
+  getAvailableJSFiles(jsDir, viteBuildSuccess) {
+    const jsFiles = {};
+    
+    if (viteBuildSuccess) {
+      // Vite ahora genera archivos en assets/js/
+      if (fs.existsSync(jsDir)) {
+        const files = fs.readdirSync(jsDir);
+        files.forEach(file => {
+          if (file.endsWith('.js') && !file.endsWith('.map')) {
+            // Archivos de Vite library build
+            if (file.includes('toulouse-ds')) {
+              const format = file.includes('.es.') ? 'es' : 'umd';
+              jsFiles[`toulouse-ds-${format}`] = `js/${file}`;
+            } else if (file.includes('index') || file.includes('main')) {
+              jsFiles['main'] = `js/${file}`;
+            }
+          }
+        });
+      }
+    } else {
+      // Buscar archivos fallback
+      if (fs.existsSync(jsDir)) {
+        const files = fs.readdirSync(jsDir);
+        files.forEach(file => {
+          if (file.endsWith('.js') && !file.endsWith('.map')) {
+            jsFiles[file.replace('.js', '')] = `js/${file}`;
+          }
+        });
+      }
+    }
+    
+    return jsFiles;
   }
 
   copyDirectory(src, dest) {

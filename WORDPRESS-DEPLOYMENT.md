@@ -13,15 +13,31 @@ wordpress-output/
     ├── footer.php              # ✅ Obligatorio  
     ├── index.php               # ✅ Obligatorio
     ├── style.css               # ✅ Obligatorio
-    ├── functions.php           # ✅ Obligatorio
+    ├── functions.php           # ✅ Obligatorio (con config dinámica)
     ├── 404.php                 # ✅ Recomendado
     ├── search.php              # ✅ Recomendado
     ├── front-page.php          # ✅ Página principal
+    ├── page-carreras.php       # ✅ Template específico con SEO
     ├── assets/
     │   ├── css/
-    │   └── js/
+    │   │   ├── design-tokens.css
+    │   │   └── toulouse-design-system-[hash].css
+    │   ├── js/
+    │   │   ├── toulouse-ds.es.js      # ES6 preferido
+    │   │   └── toulouse-ds.umd.js     # UMD fallback
+    │   ├── seo-config.json            # 🆕 SEO por template
+    │   ├── asset-manifest.json        # 🆕 Manifest de assets
+    │   └── validation-rules.json      # 🆕 Reglas de validación
+    ├── inc/
+    │   ├── seo-manager.php            # 🆕 SEO dinámico
+    │   └── asset-enqueue.php          # 🆕 Carga optimizada
     └── components/
-        └── hero-section/
+        ├── hero-section/
+        │   └── hero-section.php
+        ├── course-card/
+        │   └── course-card.php
+        └── testimonials/
+            └── testimonials.php       # 🆕 Conversión Lit → PHP
 ```
 
 ## 🐳 Configuración Docker WordPress
@@ -80,18 +96,24 @@ npm run wp:validate-php
 npm run wp:validate
 ```
 
-**🔒 Validación Automática de PHP:**
-- ✅ Sintaxis PHP verificada con `php -l`
-- ✅ Patrones problemáticos detectados y corregidos
-- ✅ Variables globales validadas contra null pointers
-- ✅ CSS de Web Components limpiado para WordPress
-- ✅ Rollback automático si hay errores
+**🆕 Características Avanzadas:**
+- ✅ **Sintaxis PHP verificada** con `php -l` en tiempo real
+- ✅ **Patrones problemáticos detectados** y corregidos automáticamente
+- ✅ **Variables globales validadas** contra null pointers  
+- ✅ **CSS de Web Components limpiado** para WordPress
+- ✅ **Rollback automático** si hay errores
+- ✅ **Conversión Lit → PHP** con métodos y condicionales
+- ✅ **SEO dinámico** con meta tags específicos por template
+- ✅ **Configuración client-agnostic** usando ConfigManager
+- ✅ **Asset management** con ES6/UMD y hashes únicos
 
 ### 3. Ver Cambios en WordPress
 Los cambios se reflejan automáticamente gracias al symlink:
-- ✅ Templates PHP actualizados
-- ✅ CSS/JS regenerado
-- ✅ Componentes convertidos
+- ✅ **Templates PHP actualizados** con conversión Lit → PHP
+- ✅ **CSS/JS regenerado** con hashes únicos y optimización
+- ✅ **Componentes convertidos** con métodos y condicionales  
+- ✅ **SEO dinámico aplicado** por template específico
+- ✅ **Meta tags y JSON-LD** generados automáticamente
 
 ## ✅ Validación de Compatibilidad
 

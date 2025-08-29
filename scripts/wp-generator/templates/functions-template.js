@@ -2,6 +2,12 @@ class FunctionsTemplate {
   constructor(config) {
     this.config = config;
     this.metadata = this.loadMetadata();
+    
+    // Extraer configuraciones dinámicas
+    this.functionPrefix = config.phpFunctionPrefix || 'theme';
+    this.enqueueHandle = config.themeName || 'theme';
+    this.themeDisplayName = config.themeDisplayName || 'Generated Theme';
+    this.assetPaths = config.assetPaths || { css: 'assets/css', js: 'assets/js' };
   }
 
   loadMetadata() {
@@ -40,11 +46,11 @@ class FunctionsTemplate {
   generate() {
     return `<?php
 /**
- * Functions.php - Generado automáticamente
+ * Functions.php - Generado automáticamente desde ${this.themeDisplayName}
  */
 
 // Configuración del tema
-function toulouse_theme_setup() {
+function ${this.functionPrefix}_theme_setup() {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
     
@@ -53,21 +59,85 @@ function toulouse_theme_setup() {
         'footer' => 'Menú Footer'
     ));
 }
-add_action('after_setup_theme', 'toulouse_theme_setup');
+add_action('after_setup_theme', '${this.functionPrefix}_theme_setup');
 
-// Encolar assets
-function toulouse_enqueue_assets() {
-    // CSS
-    wp_enqueue_style('toulouse-tokens', get_template_directory_uri() . '/assets/css/design-tokens.css');
-    wp_enqueue_style('toulouse-style', get_stylesheet_uri());
+// Encolar assets (basado en disponibilidad)
+function ${this.functionPrefix}_enqueue_assets() {
+    // Leer manifest de assets disponibles
+    $manifest_file = get_template_directory() . '/assets/available-assets.json';
+    $assets_available = array();
     
-    // JavaScript
-    wp_enqueue_script('toulouse-js', get_template_directory_uri() . '/assets/js/index.js', array(), '1.0', true);
+    if (file_exists($manifest_file)) {
+        $manifest_content = file_get_contents($manifest_file);
+        $assets_available = json_decode($manifest_content, true);
+    }
+    
+    // CSS - Encolar usando nombres reales del manifest
+    if (isset($assets_available['css'])) {
+        foreach ($assets_available['css'] as $asset_key => $filename) {
+            if ($asset_key === 'design-tokens') {
+                wp_enqueue_style('${this.enqueueHandle}-tokens', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
+            } elseif (strpos($asset_key, '${this.enqueueHandle}') === 0) {
+                wp_enqueue_style('${this.enqueueHandle}-main', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
+            }
+        }
+    }
+    
+    wp_enqueue_style('${this.enqueueHandle}-style', get_stylesheet_uri());
+    
+    // JavaScript - Encolar solo UNA versión para evitar conflictos
+    if (isset($assets_available['js'])) {
+        $js_loaded = false;
+        
+        // Preferir ES6 sobre UMD para mejor compatibilidad con módulos
+        foreach ($assets_available['js'] as $asset_key => $filename) {
+            if ((strpos($asset_key, '${this.enqueueHandle.split('-')[0]}-ds') === 0 || $asset_key === 'main') && !$js_loaded) {
+                // Preferir versión ES6
+                if (strpos($filename, '.es.js') !== false) {
+                    $js_path = $filename;
+                    $handle = '${this.enqueueHandle}-js-main';
+                    wp_enqueue_script($handle, get_template_directory_uri() . '/assets/' . $js_path, array(), '1.0', true);
+                    
+                    // Añadir atributo type="module" para ES6
+                    add_filter('script_loader_tag', function($tag, $handle_filter, $src) use ($handle) {
+                        if ($handle_filter === $handle) {
+                            return str_replace('<script type="text/javascript"', '<script type="module"', $tag);
+                        }
+                        return $tag;
+                    }, 10, 3);
+                    
+                    $js_loaded = true;
+                }
+            }
+        }
+        
+        // Si no encontró ES6, cargar UMD como fallback
+        if (!$js_loaded) {
+            foreach ($assets_available['js'] as $asset_key => $filename) {
+                if ((strpos($asset_key, '${this.enqueueHandle.split('-')[0]}-ds') === 0 || $asset_key === 'main') && !$js_loaded) {
+                    if (strpos($filename, '.umd.js') !== false) {
+                        $js_path = $filename;
+                        $handle = '${this.enqueueHandle}-js-main';
+                        wp_enqueue_script($handle, get_template_directory_uri() . '/assets/' . $js_path, array(), '1.0', true);
+                        $js_loaded = true;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Debug info (solo para desarrollo)
+    if (defined('WP_DEBUG') && WP_DEBUG) {
+        $build_success = isset($assets_available['buildSuccess']) ? $assets_available['buildSuccess'] : false;
+        if (!$build_success) {
+            echo '<!-- ${this.themeDisplayName}: Assets optimizados no disponibles. Usando estilos inline. -->';
+        }
+    }
 }
-add_action('wp_enqueue_scripts', 'toulouse_enqueue_assets');
+add_action('wp_enqueue_scripts', '${this.functionPrefix}_enqueue_assets');
 
 // Auto-incluir todos los componentes
-function toulouse_load_components() {
+function ${this.functionPrefix}_load_components() {
     $components_dir = get_template_directory() . '/components/';
     $components = glob($components_dir . '*/');
     
@@ -80,10 +150,10 @@ function toulouse_load_components() {
         }
     }
 }
-add_action('init', 'toulouse_load_components');
+add_action('init', '${this.functionPrefix}_load_components');
 
 // Cargar módulos avanzados
-function toulouse_load_advanced_modules() {
+function ${this.functionPrefix}_load_advanced_modules() {
     // Cargar sistema de validación y fallbacks
     $validation_file = get_template_directory() . '/inc/validation.php';
     if (file_exists($validation_file)) {
@@ -96,22 +166,23 @@ function toulouse_load_advanced_modules() {
         require_once $seo_file;
     }
     
-    // Cargar sistema de assets optimizados
-    $assets_file = get_template_directory() . '/inc/asset-enqueue.php';
-    if (file_exists($assets_file)) {
-        require_once $assets_file;
-    }
+    // Cargar sistema de assets optimizados - DESHABILITADO para evitar duplicados
+    // El enqueue de assets se maneja directamente en functions.php
+    // $assets_file = get_template_directory() . '/inc/asset-enqueue.php';
+    // if (file_exists($assets_file)) {
+    //     require_once $assets_file;
+    // }
 }
-add_action('init', 'toulouse_load_advanced_modules');
+add_action('init', '${this.functionPrefix}_load_advanced_modules');
 
 // Custom Post Types - Generado desde metadata
-function toulouse_register_post_types() {
+function ${this.functionPrefix}_register_post_types() {
 ${this.generatePostTypes()}
 }
-add_action('init', 'toulouse_register_post_types');
+add_action('init', '${this.functionPrefix}_register_post_types');
 
 // SEO y Analytics por plantilla
-function toulouse_page_seo_analytics() {
+function ${this.functionPrefix}_page_seo_analytics() {
     if (!is_page()) return;
     
     $page_template = get_page_template_slug();
@@ -172,7 +243,7 @@ function toulouse_page_seo_analytics() {
         echo '</script>';
     }
 }
-add_action('wp_head', 'toulouse_page_seo_analytics');
+add_action('wp_head', '${this.functionPrefix}_page_seo_analytics');
 ?>`;
   }
 }

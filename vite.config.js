@@ -6,7 +6,7 @@ export default defineConfig({
     lib: {
       entry: 'src/index.js',
       name: 'ToulouseDS',
-      fileName: (format) => `toulouse-ds.${format}.js`
+      fileName: (format) => `js/toulouse-ds.${format}.js`
     },
     rollupOptions: {
       output: {

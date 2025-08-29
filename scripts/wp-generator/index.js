@@ -8,15 +8,31 @@ const GenerationValidator = require('./validator');
 const SEOManager = require('./seo-manager');
 const ValidationManager = require('./validation-manager');
 const PHPValidator = require('./php-validator');
+const ConfigManager = require('./config-manager');
 
 class WordPressGenerator {
-  constructor(config) {
+  constructor(customConfig = {}) {
+    // Usar el gestor de configuración dinámico
+    this.configManager = new ConfigManager();
+    const dynamicConfig = this.configManager.getConfig();
+    
+    // Mapear configuración dinámica al formato esperado por los generadores
     this.config = {
-      srcDir: './src',
-      outputDir: './wordpress-output',
-      themeName: 'toulouse-lautrec',
-      ...config
+      srcDir: dynamicConfig.paths.src,
+      outputDir: dynamicConfig.paths.output,
+      themeName: dynamicConfig.theme.name,
+      themeDisplayName: dynamicConfig.theme.displayName,
+      themePrefix: dynamicConfig.theme.prefix,
+      phpFunctionPrefix: dynamicConfig.php.functionPrefix,
+      assetPaths: dynamicConfig.paths.assets,
+      ...customConfig // Override con configuración personalizada
     };
+    
+    // Validar configuración
+    this.configManager.validateConfig(dynamicConfig);
+    
+    // Mostrar configuración en debug
+    this.configManager.printConfig();
     
     this.themeStructure = new ThemeStructure(this.config);
     this.componentGenerator = new ComponentGenerator(this.config);
@@ -29,11 +45,26 @@ class WordPressGenerator {
   }
 
   cleanOutputDirectory() {
-    const themeDir = path.join(this.config.outputDir, this.config.themeName);
+    const outputDir = this.config.outputDir;
     
-    if (fs.existsSync(themeDir)) {
+    if (fs.existsSync(outputDir)) {
       console.log('🧹 Limpiando directorio de salida anterior...');
-      fs.rmSync(themeDir, { recursive: true, force: true });
+      // Limpiar todo el directorio wordpress-output
+      const items = fs.readdirSync(outputDir);
+      for (const item of items) {
+        const itemPath = path.join(outputDir, item);
+        const stat = fs.lstatSync(itemPath);
+        
+        if (stat.isDirectory()) {
+          // Remover todos los directorios (temas antiguos, residuales, etc.)
+          fs.rmSync(itemPath, { recursive: true, force: true });
+          console.log(`   🗑️ Removido directorio: ${item}`);
+        } else {
+          // Remover archivos residuales (manifests, reportes, etc.)
+          fs.unlinkSync(itemPath);
+          console.log(`   🗑️ Removido archivo: ${item}`);
+        }
+      }
     }
   }
 
@@ -53,8 +84,9 @@ class WordPressGenerator {
       // 2. Convertir componentes Lit a PHP
       await this.componentGenerator.convertAllComponents();
       
-      // 3. Generar assets CSS/JS optimizados
-      this.assetManager.build();
+      // 3. Generar assets CSS/JS optimizados (REQUERIDO)
+      console.log('📦 Assets optimizados son requeridos para generación completa');
+      this.assetManager.build(); // Si falla, se propaga el error y hace rollback
       
       // 4. Crear plantillas WordPress (puede fallar en validación)
       await this.templateBuilder.generateAll();
@@ -86,7 +118,7 @@ class WordPressGenerator {
       const allValidationsPass = isValid && finalValidation && phpValidation;
       
       if (allValidationsPass) {
-        console.log('✅ Tema WordPress avanzado generado y validado exitosamente!');
+        console.log('✅ Tema WordPress completo generado y validado exitosamente!');
         console.log('🎯 Características incluidas:');
         console.log('   - ✅ Assets optimizados con lazy loading');
         console.log('   - ✅ SEO dinámico con JSON-LD');
@@ -94,6 +126,8 @@ class WordPressGenerator {
         console.log('   - ✅ Extensiones y hooks personalizables');
         console.log('   - ✅ Manejo de errores robusto');
         console.log('   - ✅ Validación automática de sintaxis PHP');
+        console.log('   - ✅ Generación dinámica desde componentes Lit');
+        console.log('\n🚀 Tema listo para producción');
       } else {
         console.log('❌ Validación falló. Haciendo rollback...');
         this.rollbackGeneration();
@@ -105,10 +139,19 @@ class WordPressGenerator {
     } catch (error) {
       console.error('❌ Error crítico durante la generación:', error.message);
       
-      // Hacer rollback si la generación había comenzado
+      // Mostrar instrucciones para solución
+      if (error.message.includes('Assets build failed')) {
+        console.log('🔧 Para solución:');
+        console.log('   1. Actualiza Node.js a versión 20.19+ o 22.12+');
+        console.log('   2. Ejecuta: npm run build manualmente');
+        console.log('   3. Vuelve a ejecutar la generación');
+      }
+      
+      // Hacer rollback completo SIEMPRE
       if (generationStarted) {
-        console.log('🔄 Haciendo rollback de archivos generados...');
+        console.log('🔄 Haciendo rollback completo...');
         this.rollbackGeneration();
+        console.log('📋 wordpress-output limpiado. No se generó tema parcial.');
       }
       
       return false;
