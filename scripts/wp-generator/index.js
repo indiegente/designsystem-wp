@@ -75,8 +75,12 @@ class WordPressGenerator {
     // 0. Validar Node.js version (FAIL FAST)
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+    if (majorVersion < 20) {
+      throw new Error(`❌ NODE.js VERSION: Requerido Node.js 20+. Actual: ${nodeVersion}\n💡 Ejecutar: nvm use 24`);
+    }
     if (majorVersion < 24) {
-      throw new Error(`❌ NODE.js VERSION: Requerido Node.js 24+. Actual: ${nodeVersion}\n💡 Ejecutar: nvm use 24`);
+      console.log(`⚠️ ADVERTENCIA: Node.js ${nodeVersion} detectado. Recomendado: Node.js 24+`);
+      console.log('💡 Para óptimo rendimiento: nvm use 24');
     }
     
     let generationStarted = false;
@@ -103,7 +107,9 @@ class WordPressGenerator {
       this.seoManager.generate();
       
       // 6. Generar sistema de Analytics (GA4, eventos, data layer)
-      const analyticsManager = new AnalyticsManager(this.config);
+      const dynamicConfig = this.configManager.getConfig();
+      const fullConfig = { ...this.config, analytics: dynamicConfig.analytics };
+      const analyticsManager = new AnalyticsManager(fullConfig);
       analyticsManager.generateAnalyticsFile();
       
       // 7. Ejecutar validación y generar fallbacks

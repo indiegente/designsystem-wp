@@ -117,5 +117,47 @@
         }
       }
     ]
+  },
+  "page-test-showcase": {
+    "title": "Test Showcase - Validación Completa",
+    "description": "Página para probar todos los managers del sistema",
+    "components": [
+      {
+        "name": "test-showcase",
+        "props": {
+          "title": "Test Showcase - Validación de Managers",
+          "description": "Componente completo que ejercita todos los managers del sistema WordPress",
+          "testImages": [
+            {"src": "https://via.placeholder.com/300x200/FF6B35/FFFFFF?text=Asset+Test+1", "alt": "Asset Manager Test 1"},
+            {"src": "https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Asset+Test+2", "alt": "Asset Manager Test 2"},
+            {"src": "https://via.placeholder.com/300x200/FFD23F/000000?text=Analytics+Test", "alt": "Analytics Manager Test"},
+            {"src": "https://via.placeholder.com/300x200/06FFA5/000000?text=SEO+Test", "alt": "SEO Manager Test"}
+          ],
+          "testData": {
+            "analytics": ["page_view", "component_view", "interaction", "form_submit"],
+            "seo": {"schema": "WebPage", "structured": true},
+            "performance": {"lazyLoading": true, "preload": true}
+          },
+          "enableAnalytics": true
+        },
+        "seo": {
+          "title": "Test Showcase - Validación Completa | Toulouse Lautrec",
+          "description": "Página de prueba para validar todos los managers del sistema de generación WordPress",
+          "keywords": "test, showcase, managers, wordpress, validation",
+          "canonical": "/test-showcase"
+        },
+        "analytics": {
+          "pageView": "page_view_test_showcase",
+          "events": [
+            {
+              "name": "test_component_load",
+              "category": "testing",
+              "action": "load",
+              "label": "test_showcase_component"
+            }
+          ]
+        }
+      }
+    ]
   }
 }

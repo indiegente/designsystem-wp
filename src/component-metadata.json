@@ -52,15 +52,12 @@
       "title": "Carrera",
       "description": "Detalle de carrera"
     },
-    "page-productos": {
-      "file": "page-productos.php",
-      "title": "Productos",
-      "description": "Catálogo de productos y servicios"
-    },
-    "single-producto": {
-      "file": "single-producto.php",
-      "title": "Producto",
-      "description": "Detalle del producto"
+    "page-test-showcase": {
+      "file": "page-test-showcase.php",
+      "title": "Test Showcase - Validación Completa",
+      "description": "Página para probar todos los managers del sistema",
+      "expectedComponents": ["test-showcase"],
+      "url": "/test-showcase/"
     }
   },
   "componentMapping": {
@@ -182,6 +179,62 @@
         "lightbox-open"
       ],
       "stateManagement": true
+    }
+  },
+  "test-showcase": {
+    "type": "comprehensive",
+    "phpFunction": "render_test_showcase",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "Test Showcase - Validación Completa" },
+      { "name": "description", "type": "string", "default": "Componente para probar todos los managers" },
+      { "name": "testImages", "type": "array", "default": "array()" },
+      { "name": "testData", "type": "object", "default": "array()" },
+      { "name": "enableAnalytics", "type": "boolean", "default": "true" }
+    ],
+    "wordpressData": {
+      "fields": {
+        "title": {
+          "source": "post_title",
+          "type": "native"
+        },
+        "description": {
+          "source": "post_excerpt",
+          "type": "native"
+        },
+        "testImages": {
+          "source": "meta_test_images",
+          "type": "acf"
+        },
+        "testData": {
+          "source": "meta_test_data",
+          "type": "acf"
+        },
+        "enableAnalytics": {
+          "source": "meta_enable_analytics",
+          "type": "acf"
+        }
+      },
+      "defaultValues": {
+        "enableAnalytics": true,
+        "testImages": [
+          { "src": "https://via.placeholder.com/300x200/FF6B35/FFFFFF?text=Test+1", "alt": "Imagen de prueba 1" },
+          { "src": "https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Test+2", "alt": "Imagen de prueba 2" }
+        ]
+      }
+    },
+    "performance": {
+      "lazyLoading": true,
+      "preloadImages": false
+    },
+    "analytics": {
+      "events": ["page_view", "component_view", "button_click", "image_interaction", "form_submit"],
+      "category": "test_showcase",
+      "trackingEnabled": true
+    },
+    "seo": {
+      "schema": "WebPage",
+      "structuredData": true,
+      "priority": "high"
     }
   }
 }

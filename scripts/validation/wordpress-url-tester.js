@@ -198,8 +198,10 @@ class WordPressURLTester {
       issues.push('❌ Scripts duplicados detectados - posible conflicto de custom elements');
     }
     
-    // 4. Lazy loading
-    if (!html.includes('loading="lazy"')) {
+    // 4. Lazy loading - Solo validar si hay imágenes reales en la página
+    const hasImages = html.includes('<img') && !html.includes('wp-smiley'); // Excluir emojis WP
+    
+    if (hasImages && !html.includes('loading="lazy"')) {
       issues.push('⚠️ Lazy loading no detectado en imágenes');
     }
     
@@ -253,13 +255,20 @@ class WordPressURLTester {
   validateTemplateManager(html, urlConfig) {
     const issues = [];
     
-    // 1. WordPress hooks básicos
-    if (!html.includes('wp_head()')) {
-      issues.push('❌ wp_head() hook faltante en header');
+    // 1. WordPress hooks básicos - Validar evidencia de ejecución
+    // wp_head() se ejecuta correctamente si hay meta tags y CSS enqueued
+    const hasMetaTags = html.includes('<meta') && html.includes('wp-content/themes');
+    const hasCssEnqueued = html.includes('toulouse-lautrec') && html.includes('css');
+    
+    if (!hasMetaTags || !hasCssEnqueued) {
+      issues.push('❌ wp_head() hook no ejecutándose correctamente');
     }
     
-    if (!html.includes('wp_footer()')) {
-      issues.push('❌ wp_footer() hook faltante en footer');  
+    // wp_footer() se ejecuta correctamente si hay scripts al final antes de </body>
+    const hasScriptsBeforeBodyEnd = html.includes('<script') && html.lastIndexOf('<script') > html.lastIndexOf('</footer>');
+    
+    if (!hasScriptsBeforeBodyEnd) {
+      issues.push('⚠️ wp_footer() hook - scripts no detectados antes de </body>');
     }
     
     // 2. WordPress body classes

@@ -175,7 +175,14 @@ add_action('wp_head', function() {
   convertLitTemplateToPhp(litTemplate, componentName) {
     let phpTemplate = litTemplate;
     
-    // Manejar arrays con map() - caso especial para feature-grid
+    // Manejar arrays con map() - soportar parámetros múltiples (img, index)
+    phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\(([^,)]+)(?:,\s*(\w+))?\)\s*=>\s*html`([\s\S]*?)`\)\}/g, 
+      (match, arrayProp, itemVar, indexVar, itemTemplate) => {
+        let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp, itemVar, indexVar);
+        return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as ${indexVar ? '$index => ' : ''}$item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p>No hay elementos disponibles.</p><?php endif; ?>`;
+      });
+    
+    // Fallback para patrón simple sin paréntesis
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\w+ => html`([\s\S]*?)`\)\}/g, 
       (match, arrayProp, itemTemplate) => {
         let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp);
@@ -225,12 +232,14 @@ add_action('wp_head', function() {
   /**
    * Convierte template de item de array
    */
-  convertArrayItemTemplate(itemTemplate, arrayProp) {
+  convertArrayItemTemplate(itemTemplate, arrayProp, itemVar = null, indexVar = null) {
     // Para feature-grid, convertir ${feature.property} a <?php echo $item['property']; ?>
     let phpTemplate = itemTemplate;
     
-    // Buscar propiedades del item (ej: feature.title, feature.icon)
-    const itemVar = arrayProp === 'features' ? 'feature' : arrayProp.slice(0, -1); // quitar 's' del plural
+    // Determinar el nombre de la variable del item
+    if (!itemVar) {
+      itemVar = arrayProp === 'features' ? 'feature' : arrayProp.slice(0, -1); // quitar 's' del plural
+    }
     
     // Manejar condicionales complejos con templates anidados de forma genérica
     // Patrón: ${item.prop ? html`...` : html`...`}
@@ -354,6 +363,28 @@ add_action('wp_head', function() {
     return camelCaseName.replace(/([A-Z])/g, '_$1').toLowerCase();
   }
 
+  /**
+   * Genera conversiones de parámetros JSON para componentes que los necesiten
+   */
+  generateParamConversions(componentName) {
+    const metadata = this.metadata[componentName];
+    if (!metadata || !metadata.parameters) return '';
+    
+    const jsonParams = metadata.parameters.filter(param => 
+      param.type === 'array' || param.type === 'object' || param.name.includes('Data') || param.name.includes('Images')
+    );
+    
+    if (jsonParams.length === 0) return '';
+    
+    const conversions = jsonParams.map(param => 
+      `// Convertir parámetros JSON a arrays PHP
+    if (is_string($${param.name})) {
+        $${param.name} = json_decode($${param.name}, true) ?: ${param.type === 'array' ? '[]' : '{}'};
+    }`
+    ).join('\n    ');
+    
+    return conversions;
+  }
 
   /**
    * Extrae propiedades del componente Lit

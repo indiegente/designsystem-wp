@@ -55,6 +55,10 @@ class AnalyticsManager {
    * Genera archivo PHP de analytics para WordPress
    */
   generateAnalyticsFile() {
+    // 1. Generar archivo de configuración JSON
+    this.generateAnalyticsConfigFile();
+    
+    // 2. Generar archivo PHP
     const analyticsContent = this.generateAnalyticsPhp();
     
     const outputPath = path.join(
@@ -66,6 +70,42 @@ class AnalyticsManager {
     
     fs.writeFileSync(outputPath, analyticsContent);
     console.log('✅ Analytics Manager generado');
+  }
+
+  /**
+   * Genera archivo analytics-config.json para que PHP lo lea
+   */
+  generateAnalyticsConfigFile() {
+    // DEBUG: Mostrar qué configuración estamos recibiendo
+    console.log('🔍 DEBUG Analytics Config:', JSON.stringify(this.analyticsConfig, null, 2));
+    
+    if (!this.analyticsConfig.enabled) {
+      throw new Error('❌ ANALYTICS DESHABILITADO: config.js → analytics.enabled debe ser true\n💡 Ubicación: scripts/wp-generator/core/config.js línea 78\n💡 Configuración recibida: ' + JSON.stringify(this.analyticsConfig));
+    }
+
+    if (!this.analyticsConfig.googleAnalytics?.measurementId || this.analyticsConfig.googleAnalytics.measurementId === 'G-XXXXXXXXXX') {
+      throw new Error('❌ GA4 ID FALTANTE: Configurar measurementId real en config.js\n💡 Ubicación: scripts/wp-generator/core/config.js línea 81\n💡 Cambiar: G-XXXXXXXXXX por tu GA4 ID real');
+    }
+
+    const configData = {
+      analytics: this.analyticsConfig
+    };
+
+    const configPath = path.join(
+      this.config.outputDir,
+      this.config.themeName,
+      'assets',
+      'analytics-config.json'
+    );
+
+    // Crear directorio assets si no existe
+    const assetsDir = path.dirname(configPath);
+    if (!fs.existsSync(assetsDir)) {
+      fs.mkdirSync(assetsDir, { recursive: true });
+    }
+
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 2));
+    console.log('✅ Archivo analytics-config.json generado');
   }
 
   /**
@@ -90,17 +130,42 @@ class ToulouseAnalyticsManager {
     }
     
     /**
-     * Carga configuración de analytics
+     * Carga configuración de analytics desde analytics-config.json
      */
     private function loadAnalyticsConfig() {
+        // Cargar desde archivo de configuración generado
+        $config_file = get_template_directory() . '/assets/analytics-config.json';
+        
+        if (file_exists($config_file)) {
+            $config_content = file_get_contents($config_file);
+            $config_data = json_decode($config_content, true);
+            
+            if ($config_data && isset($config_data['analytics'])) {
+                $analytics = $config_data['analytics'];
+                $this->analytics_config = array(
+                    'enabled' => $analytics['enabled'] ?? true,
+                    'ga4_measurement_id' => $analytics['googleAnalytics']['measurementId'] ?? '',
+                    'ga4_enabled' => $analytics['googleAnalytics']['enabled'] ?? true,
+                    'custom_events' => array(
+                        'page_views' => $analytics['customEvents']['pageViews'] ?? true,
+                        'component_views' => $analytics['customEvents']['componentViews'] ?? true,
+                        'interactions' => $analytics['customEvents']['interactions'] ?? true
+                    )
+                );
+                return;
+            }
+        }
+        
+        // FAIL FAST - No fallback si no hay configuración
+        error_log('Analytics Manager: No se encontró analytics-config.json');
         $this->analytics_config = array(
-            'enabled' => ${this.analyticsConfig.enabled ? 'true' : 'false'},
-            'ga4_measurement_id' => '${this.analyticsConfig.googleAnalytics?.measurementId || ''}',
-            'ga4_enabled' => ${this.analyticsConfig.googleAnalytics?.enabled ? 'true' : 'false'},
+            'enabled' => false,
+            'ga4_measurement_id' => '',
+            'ga4_enabled' => false,
             'custom_events' => array(
-                'page_views' => ${this.analyticsConfig.customEvents?.pageViews ? 'true' : 'false'},
-                'component_views' => ${this.analyticsConfig.customEvents?.componentViews ? 'true' : 'false'},
-                'interactions' => ${this.analyticsConfig.customEvents?.interactions ? 'true' : 'false'}
+                'page_views' => false,
+                'component_views' => false,
+                'interactions' => false
             )
         );
     }
@@ -252,17 +317,28 @@ class ToulouseAnalyticsManager {
     }
 }
 
-// Inicializar Analytics Manager
-$toulouse_analytics = null;
-try {
-    $toulouse_analytics = new ToulouseAnalyticsManager();
-} catch (Exception $e) {
-    error_log('Error inicializando ToulouseAnalyticsManager: ' . $e->getMessage());
+// Inicializar Analytics Manager lazy
+function get_toulouse_analytics() {
+    static $toulouse_analytics = null;
+    
+    if ($toulouse_analytics === null) {
+        try {
+            $toulouse_analytics = new ToulouseAnalyticsManager();
+        } catch (Exception $e) {
+            error_log('Error inicializando ToulouseAnalyticsManager: ' . $e->getMessage());
+            $toulouse_analytics = false;
+        } catch (Error $e) {
+            error_log('Error fatal en ToulouseAnalyticsManager: ' . $e->getMessage());
+            $toulouse_analytics = false;
+        }
+    }
+    
+    return $toulouse_analytics;
 }
 
 // Hook para GA4 en wp_head
 function toulouse_analytics_ga4() {
-    global $toulouse_analytics;
+    $toulouse_analytics = get_toulouse_analytics();
     if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateGA4Script')) {
         echo $toulouse_analytics->generateGA4Script();
     }
@@ -271,7 +347,7 @@ add_action('wp_head', 'toulouse_analytics_ga4');
 
 // Hook para data layer en wp_head
 function toulouse_analytics_data_layer() {
-    global $toulouse_analytics;
+    $toulouse_analytics = get_toulouse_analytics();
     if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateDataLayer')) {
         echo $toulouse_analytics->generateDataLayer();
     }
@@ -280,7 +356,7 @@ add_action('wp_head', 'toulouse_analytics_data_layer');
 
 // Hook para eventos personalizados en wp_footer
 function toulouse_analytics_events() {
-    global $toulouse_analytics;
+    $toulouse_analytics = get_toulouse_analytics();
     if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateCustomEvents')) {
         echo $toulouse_analytics->generateCustomEvents();
     }

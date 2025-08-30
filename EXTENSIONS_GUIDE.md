@@ -26,7 +26,8 @@ src/
 │   ├── events-and-interactions.js # Eventos e interacciones
 │   └── README.md                 # Documentación local
 ├── components/                   # Componentes Lit
-└── component-metadata.json       # Metadata de componentes
+├── component-metadata.json       # Metadata de componentes
+└── page-templates.json           # ⚠️ REQUERIDO: Configuración de páginas (sin fallbacks)
 ```
 
 ### Flujo de Carga

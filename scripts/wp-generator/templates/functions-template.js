@@ -78,11 +78,11 @@ function ${this.functionPrefix}_enqueue_assets() {
             if ($asset_key === 'design-tokens') {
                 wp_enqueue_style('${this.enqueueHandle}-tokens', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
                 // Preload design tokens como critical CSS
-                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
+                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="var self=this;self.onload=null;self.rel=\\'stylesheet\\'">';
             } elseif (strpos($asset_key, '${this.enqueueHandle}') === 0) {
                 wp_enqueue_style('${this.enqueueHandle}-main', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
                 // Preload main CSS como critical
-                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
+                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="var self=this;self.onload=null;self.rel=\\'stylesheet\\'">';
             }
         }
     }
@@ -168,6 +168,12 @@ function ${this.functionPrefix}_load_advanced_modules() {
     $seo_file = get_template_directory() . '/inc/seo-manager.php';
     if (file_exists($seo_file)) {
         require_once $seo_file;
+    }
+    
+    // Cargar sistema Analytics separado
+    $analytics_file = get_template_directory() . '/inc/analytics-manager.php';
+    if (file_exists($analytics_file)) {
+        require_once $analytics_file;
     }
     
     // Cargar sistema de assets optimizados - DESHABILITADO para evitar duplicados

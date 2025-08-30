@@ -6,6 +6,7 @@ import './components/hero-section/hero-section.js';
 import './components/course-card/course-card.js';
 import './components/testimonials/testimonials.js';
 import './components/feature-grid/feature-grid.js';
+import './components/test-showcase/test-showcase.js';
 
 // Re-exportar componentes para fácil uso
 export { HeroSection } from './components/hero-section/hero-section.js';

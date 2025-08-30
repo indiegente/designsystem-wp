@@ -188,3 +188,28 @@ if (process.env.NODE_ENV !== 'test') {
 ---
 
 **🎯 RECUERDA: "Si hay errores que los procesos se trunquen, sino vamos a generar archivos que no sirven"**
+
+## 🚨 REGLA CRÍTICA: NO MODIFICAR ARCHIVOS GENERADOS
+
+### ❌ PROHIBIDO:
+- **NUNCA** modificar archivos en `wordpress-output/` directamente
+- **NUNCA** editar `.php` generados manualmente
+- **NUNCA** hacer cambios temporales en archivos de salida
+
+### ✅ CORRECTO:
+- **SIEMPRE** modificar los generadores en `scripts/wp-generator/`
+- **SIEMPRE** regenerar el tema completo después de cambios
+- **SIEMPRE** probar con `npm run wp:generate` después de modificar generadores
+
+### 📍 Ubicaciones de generadores:
+- `scripts/wp-generator/managers/analytics-manager.js` → `inc/analytics-manager.php`
+- `scripts/wp-generator/templates/functions-template.js` → `functions.php`
+- `scripts/wp-generator/templates/php-components.js` → `components/*.php`
+- `scripts/wp-generator/managers/seo-manager.js` → `inc/seo-manager.php`
+
+### 🔄 Flujo CORRECTO para fixes:
+1. Identificar problema en archivo generado
+2. Localizar el generador correspondiente
+3. Modificar el generador
+4. Ejecutar `npm run wp:generate`
+5. Validar con `npm run wp:test-urls`

@@ -179,13 +179,19 @@ get_header();
   }
 
   async generate(templateName) {
+    // Primero verificar si existe un template específico en el directorio
+    const specificTemplatePath = path.join(__dirname, `${templateName}.php`);
+    if (fs.existsSync(specificTemplatePath)) {
+      return fs.readFileSync(specificTemplatePath, 'utf8');
+    }
+
     // Si es un template de página configurado, usar configuración dinámica
     if (this.pageConfig[templateName]) {
       return await this.generatePageTemplate(templateName);
     }
 
-    // Fallback a template básico
-    return this.generateBasicTemplate(templateName);
+    // NO fallbacks - fallar si no hay configuración específica
+    throw new Error(`Template específico requerido para ${templateName}. Configurar en page-templates.json`);
   }
 }
 

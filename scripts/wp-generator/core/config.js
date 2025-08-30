@@ -78,7 +78,7 @@ module.exports = {
   analytics: {
     enabled: true,
     googleAnalytics: {
-      measurementId: 'G-XXXXXXXXXX', // Cambiar por ID real
+      measurementId: 'G-ABC123DEF4', // Cambiar por ID real
       enabled: true
     },
     facebookPixel: {
