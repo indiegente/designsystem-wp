@@ -14,16 +14,16 @@ class ComponentGenerator {
   }
 
   loadComponentMetadata() {
-    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    const metadataPath = path.join(this.config.srcDir, 'metadata.json');
     if (!fs.existsSync(metadataPath)) {
-      console.warn('⚠️ No se encontró component-metadata.json');
+      console.warn('⚠️ No se encontró metadata.json');
       return {};
     }
     
     try {
       return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     } catch (error) {
-      console.error('❌ Error cargando component-metadata.json:', error.message);
+      console.error('❌ Error cargando metadata.json:', error.message);
       return {};
     }
   }
@@ -63,8 +63,11 @@ class ComponentGenerator {
         case 'aggregated':
           result = this.generateAggregatedComponent(component, metadata, dataSource);
           break;
+        case 'comprehensive':
+          result = this.generateComprehensiveComponent(component, metadata, dataSource);
+          break;
         default:
-          result = this.generateFallbackCode(component, dataSource);
+          throw new Error(`❌ Tipo de componente '${metadata.type}' no soportado. NO usar fallbacks.`);
       }
     }
 
@@ -82,7 +85,7 @@ class ComponentGenerator {
     
     const paramsString = paramValues.map(value => `'${value}'`).join(', ');
     
-    return `${metadata.phpFunction}(${paramsString});`;
+    return `<?php ${metadata.phpFunction}(${paramsString}); ?>`;
   }
 
   generateIterativeComponent(component, metadata, dataSource) {
@@ -100,7 +103,7 @@ class ComponentGenerator {
     
     const paramsString = paramMappings.join(',\n          ');
     
-    return `
+    return `<?php
     $items = get_posts(array(${queryString}));
     
     if (!empty($items)) {
@@ -109,7 +112,8 @@ class ComponentGenerator {
         ${metadata.phpFunction}(${paramsString});
       }
       wp_reset_postdata();
-    }`;
+    }
+    ?>`;
   }
 
   generateAggregatedComponent(component, metadata, dataSource) {
@@ -172,7 +176,7 @@ class ComponentGenerator {
       .map(param => `'${props[param.name] || param.default}'`)
       .join(', ');
     
-    return `
+    return `<?php
     $items = get_posts(array(${queryString}));
     $${component.name}_data = array();
     
@@ -186,7 +190,56 @@ class ComponentGenerator {
       wp_reset_postdata();
     }
     
-    ${metadata.phpFunction}(${staticParams}, $${component.name}_data);`;
+    ${metadata.phpFunction}(${staticParams}, $${component.name}_data);
+    ?>`;
+  }
+
+  generateComprehensiveComponent(component, metadata, dataSource) {
+    // Para componentes comprehensive, usar datos reales de component.props
+    const props = component.props || {};
+    
+    const paramValues = metadata.parameters.map(param => {
+      const value = props[param.name] || param.default;
+      
+      if (param.type === 'array' && param.name === 'testImages') {
+        // Convertir array JavaScript a PHP array
+        if (Array.isArray(value)) {
+          const phpArrayItems = value.map(item => 
+            `array('src' => '${item.src}', 'alt' => '${item.alt}')`
+          ).join(', ');
+          return `array(${phpArrayItems})`;
+        }
+        return 'array()';
+      } else if (param.type === 'object' && param.name === 'testData') {
+        // Convertir object JavaScript a PHP array
+        if (typeof value === 'object' && value !== null) {
+          const phpObjectItems = [];
+          for (const [key, val] of Object.entries(value)) {
+            if (Array.isArray(val)) {
+              const phpArray = val.map(v => `'${v}'`).join(', ');
+              phpObjectItems.push(`'${key}' => array(${phpArray})`);
+            } else if (typeof val === 'object') {
+              const phpSubObject = Object.entries(val).map(([k, v]) => 
+                `'${k}' => '${v}'`
+              ).join(', ');
+              phpObjectItems.push(`'${key}' => array(${phpSubObject})`);
+            } else {
+              phpObjectItems.push(`'${key}' => '${val}'`);
+            }
+          }
+          return `array(${phpObjectItems.join(', ')})`;
+        }
+        return 'array()';
+      } else if (param.type === 'boolean') {
+        return value === 'true' || value === true ? 'true' : 'false';
+      } else {
+        return `'${value}'`;
+      }
+    });
+    
+    const paramsString = paramValues.join(', ');
+    
+    return `<?php ${metadata.phpFunction}(${paramsString}); ?>`;
   }
 
   generateFallbackCode(component, dataSource) {

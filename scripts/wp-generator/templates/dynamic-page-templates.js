@@ -92,6 +92,20 @@ class DynamicPageTemplates {
   async generatePageTemplate(pageName) {
     const pageConfig = this.pageConfig[pageName];
     
+    // Validar que la página tenga template asignado
+    if (pageConfig.template) {
+      // Cargar metadatos de templates
+      const metadataPath = path.join(this.config.srcDir, 'metadata.json');
+      if (fs.existsSync(metadataPath)) {
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        const templateConfig = metadata.templates[pageConfig.template];
+        if (templateConfig) {
+          // Mergear configuración de template con datos de página
+          pageConfig.templateConfig = templateConfig;
+        }
+      }
+    }
+    
     // Contexto para extensiones
     const context = {
       pageName,
@@ -122,23 +136,23 @@ class DynamicPageTemplates {
 
     let result = `<?php
 /*
-Template Name: ${this.generateTemplateName(pageName)}
+Template Name: ` + this.generateTemplateName(pageName) + `
 */
 
 get_header();
 
 // Incluir componentes
-${componentIncludes}
+` + componentIncludes + `
 ?>
 
-<main class="${pageName}-content">
+<main class="` + pageName + `-content">
     <?php
     // Loop de WordPress - buenas prácticas
     if (have_posts()) :
         while (have_posts()) : the_post();
             ?>
             <!-- Componentes renderizados desde configuración -->
-            ${componentRendersString}
+            ` + componentRendersString + `
             
             <!-- Contenido de la página -->
             <?php the_content(); ?>
@@ -159,12 +173,12 @@ ${componentIncludes}
   generateBasicTemplate(templateName) {
     return `<?php
 /*
-Template Name: ${this.generateTemplateName(templateName)}
+Template Name: ` + this.generateTemplateName(templateName) + `
 */
 get_header();
 ?>
 
-<main class="${templateName}-content">
+<main class="` + templateName + `-content">
     <?php
     // Loop de WordPress - buenas prácticas
     if (have_posts()) :

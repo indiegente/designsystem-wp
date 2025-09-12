@@ -63,7 +63,7 @@ module.exports = {
   // Configuración de custom post types
   postTypes: {
     enabled: true,
-    metadataSource: 'src/component-metadata.json'
+    metadataSource: 'src/metadata.json'
   },
 
   // Configuración SEO

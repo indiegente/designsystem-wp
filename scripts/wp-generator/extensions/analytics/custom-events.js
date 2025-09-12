@@ -16,7 +16,7 @@ class CustomEventsExtension {
   loadComponentMetadata() {
     const fs = require('fs');
     const path = require('path');
-    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    const metadataPath = path.join(this.config.srcDir, 'metadata.json');
     
     if (fs.existsSync(metadataPath)) {
       return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));

@@ -1,7 +1,16 @@
 {
   "page-carreras": {
+    "template": "carreras-layout",
+    "file": "page-carreras.php",
     "title": "Carreras",
     "description": "Explora nuestras carreras técnicas y programas especializados",
+    "wordpressData": {
+      "postType": "carrera",
+      "query": {
+        "numberposts": -1,
+        "post_status": "publish"
+      }
+    },
     "components": [
       {
         "name": "hero-section",
@@ -86,8 +95,13 @@
     ]
   },
   "page-contacto": {
+    "template": "basic-page-layout",
+    "file": "page-contacto.php",
     "title": "Contacto",
     "description": "Ponte en contacto con nosotros",
+    "wordpressData": {
+      "postType": "page"
+    },
     "components": [
       {
         "name": "hero-section",
@@ -119,8 +133,13 @@
     ]
   },
   "page-test-showcase": {
+    "template": "showcase-layout",
+    "file": "page-test-showcase.php",
     "title": "Test Showcase - Validación Completa",
     "description": "Página para probar todos los managers del sistema",
+    "wordpressData": {
+      "postType": "page"
+    },
     "components": [
       {
         "name": "test-showcase",

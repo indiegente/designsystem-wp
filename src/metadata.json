@@ -37,17 +37,26 @@
     }
   },
   "templates": {
-    "page-carreras": {
-      "file": "page-carreras.php",
-      "title": "Carreras",
-      "description": "Explora nuestras carreras técnicas y programas especializados"
+    "carreras-layout": {
+      "name": "Carreras Layout",
+      "description": "Template para páginas de carreras educativas",
+      "components": ["hero-section", "course-card", "testimonials"],
+      "layout": "standard",
+      "category": "educational"
     },
-    "page-test-showcase": {
-      "file": "page-test-showcase.php",
-      "title": "Test Showcase - Validación Completa",
-      "description": "Página para probar todos los managers del sistema",
-      "expectedComponents": ["test-showcase"],
-      "url": "/test-showcase/"
+    "showcase-layout": {
+      "name": "Test Showcase Layout",
+      "description": "Template para validación completa del sistema",
+      "components": ["test-showcase"],
+      "layout": "testing",
+      "category": "validation"
+    },
+    "basic-page-layout": {
+      "name": "Basic Page Layout",
+      "description": "Template básico para páginas estándar",
+      "components": ["hero-section"],
+      "layout": "minimal",
+      "category": "basic"
     }
   },
   "componentMapping": {

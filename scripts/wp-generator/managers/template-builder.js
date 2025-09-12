@@ -14,7 +14,7 @@ class TemplateBuilder {
   }
 
   loadMetadata() {
-    const metadataPath = path.join(this.config.srcDir, 'component-metadata.json');
+    const metadataPath = path.join(this.config.srcDir, 'metadata.json');
     if (fs.existsSync(metadataPath)) {
       return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     }
@@ -68,12 +68,17 @@ class TemplateBuilder {
       { name: 'front-page', file: 'front-page.php' }
     ];
 
-    // Templates desde metadata
-    const metadataTemplates = this.metadata.templates ? 
-      Object.entries(this.metadata.templates).map(([name, config]) => ({
-        name: name,
-        file: config.file
-      })) : [];
+    // Templates desde page-templates.json (no desde metadata)
+    const pageTemplatesPath = path.join(this.config.srcDir, 'page-templates.json');
+    let pageTemplates = {};
+    if (fs.existsSync(pageTemplatesPath)) {
+      pageTemplates = JSON.parse(fs.readFileSync(pageTemplatesPath, 'utf8'));
+    }
+    
+    const metadataTemplates = Object.entries(pageTemplates).map(([pageName, pageConfig]) => ({
+      name: pageName,
+      file: pageConfig.file || `${pageName}.php`
+    }));
 
     const templates = [...baseTemplates, ...metadataTemplates];
 
@@ -93,12 +98,13 @@ class TemplateBuilder {
   }
 
   generateStyleHeader() {
+    const themeConfig = this.config.theme || {};
     const styleContent = `/*
-Theme Name: Toulouse Lautrec
-Description: Tema personalizado generado automáticamente desde Design System
-Version: 1.0.0
-Author: Multiplica
-Text Domain: toulouse-lautrec
+Theme Name: ${themeConfig.displayName || 'Generated Theme'}
+Description: ${themeConfig.description || 'Tema personalizado generado automáticamente desde Design System'}
+Version: ${themeConfig.version || '1.0.0'}
+Author: ${themeConfig.author || 'Design System Generator'}
+Text Domain: ${themeConfig.textDomain || 'generated-theme'}
 */
 
 @import url('assets/css/design-tokens.css');

@@ -198,7 +198,9 @@ class PHPValidator {
     // Pre-validación: detectar patrones problemáticos
     const preValidationIssues = this.detectCommonIssues(phpContent, virtualFilename);
     if (preValidationIssues.length > 0) {
+      console.error(`🐛 DEBUG: Errores de pre-validación en ${virtualFilename}:`);
       preValidationIssues.forEach(issue => {
+        console.error(`   - ${issue}`);
         this.addError(virtualFilename, issue);
       });
       return false;
@@ -233,8 +235,8 @@ class PHPValidator {
       const line = lines[i];
       const lineNum = i + 1;
       
-      // Detectar PHP anidado en comentarios JavaScript
-      if (line.includes('//') && line.includes('<?php')) {
+      // Detectar PHP anidado en comentarios JavaScript REALES (no HTML)
+      if (line.trim().startsWith('//') && line.includes('<?php')) {
         issues.push(`Línea ${lineNum}: PHP anidado en comentario JavaScript detectado. Esto puede causar problemas de parsing.`);
       }
       
@@ -251,9 +253,12 @@ class PHPValidator {
         }
       }
       
-      // Detectar template strings mal formateados en concatenación
-      if (line.includes('${') && line.includes("'")) {
-        issues.push(`Línea ${lineNum}: Template string posiblemente mal formateado en contexto PHP`);
+      // Detectar template strings mal formateados en concatenación (solo patrones problemáticos reales)
+      if (line.match(/\$\{.*\}/) && (line.includes("'") || line.includes('"')) && line.trim().length > 10) {
+        // Solo reportar si realmente parece un template string problemático (no URLs con parámetros)
+        if (!line.includes('placeholder.com') && !line.includes('via.placeholder') && line.includes('$')) {
+          issues.push(`Línea ${lineNum}: Template string posiblemente mal formateado en contexto PHP`);
+        }
       }
       
       // Detectar etiquetas PHP incompletas

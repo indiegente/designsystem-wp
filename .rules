@@ -213,3 +213,57 @@ if (process.env.NODE_ENV !== 'test') {
 3. Modificar el generador
 4. Ejecutar `npm run wp:generate`
 5. Validar con `npm run wp:test-urls`
+
+
+🛡️ REGLAS DE WORDPRESS DEVELOPMENT
+
+✅ Escapado y Sanitización Obligatoria
+	•	OBLIGATORIO escapar salidas dinámicas:
+	•	esc_html() → texto
+	•	esc_url() → urls
+	•	esc_attr() → atributos HTML
+	•	wp_kses_post() → contenido rico
+	•	OBLIGATORIO sanitizar inputs con sanitize_text_field(), sanitize_email(), etc.
+	•	❌ PROHIBIDO imprimir datos de WP sin escape.
+
+🌍 Internacionalización (i18n)
+	•	OBLIGATORIO envolver textos duros con __(), _e(), esc_html__(), etc.
+	•	OBLIGATORIO usar un text-domain consistente.
+	•	❌ PROHIBIDO hardcodear strings sin traducción.
+
+📂 Organización y Estructura
+	•	OBLIGATORIO seguir jerarquía de plantillas de WP (page.php, single.php, etc.).
+	•	OBLIGATORIO usar get_template_part() en lugar de require.
+	•	OBLIGATORIO mantener queries en inc/ y presentación en plantillas.
+	•	❌ PROHIBIDO mezclar queries complejas en plantillas.
+
+⚙️ Queries y Loop
+	•	OBLIGATORIO usar WP_Query si hay paginación o control avanzado.
+	•	OBLIGATORIO llamar wp_reset_postdata() tras un loop secundario.
+	•	❌ PROHIBIDO queries sin parámetros seguros.
+
+🔒 Seguridad
+	•	OBLIGATORIO wp_nonce_field() y check_admin_referer() en formularios.
+	•	OBLIGATORIO validar todos los $_POST, $_GET, $_REQUEST.
+	•	❌ PROHIBIDO usar valores de usuario sin validar.
+
+🎨 Encolado de Scripts y Estilos
+	•	OBLIGATORIO wp_enqueue_script y wp_enqueue_style.
+	•	❌ PROHIBIDO inyectar <script> o <link> en plantillas.
+
+📢 Errores y Debug
+	•	OBLIGATORIO usar wp_die() en errores críticos.
+	•	OBLIGATORIO deshabilitar WP_DEBUG_DISPLAY en producción.
+
+⸻
+
+🛡️ REGLAS ADICIONALES PARA ACF
+	•	❌ PROHIBIDO usar the_field() → siempre usar get_field() + escape.
+	•	✅ OBLIGATORIO validar campos requeridos. Fallar rápido si no existen.
+	•	✅ OBLIGATORIO escapar según tipo de campo:
+	•	Texto → esc_html()
+	•	URL → esc_url()
+	•	WYSIWYG → wp_kses_post()
+	•	✅ OBLIGATORIO sanitizar en acf/update_value antes de guardar.
+	•	✅ OBLIGATORIO documentar en component-metadata.json qué campos ACF usa cada componente.
+	•	❌ PROHIBIDO hardcodear valores de ACF como fallback.

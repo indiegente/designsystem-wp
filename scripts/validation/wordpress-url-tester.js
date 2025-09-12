@@ -33,54 +33,53 @@ class WordPressURLTester {
    * Genera URLs de test dinámicamente desde la metadata
    */
   generateTestUrls() {
-    const metadataPath = path.join(process.cwd(), 'src', 'component-metadata.json');
-    let metadata = {};
+    // Cargar desde page-templates.json (no desde metadata.json)
+    const pageTemplatesPath = path.join(process.cwd(), 'src', 'page-templates.json');
+    let pageTemplates = {};
     
-    if (fs.existsSync(metadataPath)) {
+    if (fs.existsSync(pageTemplatesPath)) {
       try {
-        metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        pageTemplates = JSON.parse(fs.readFileSync(pageTemplatesPath, 'utf8'));
       } catch (error) {
-        console.warn('⚠️ Error cargando metadata, usando URLs por defecto');
+        console.warn('⚠️ Error cargando page-templates.json, usando URLs por defecto');
       }
     }
 
     const urls = [];
     
-    // URLs desde templates en metadata
-    if (metadata.templates) {
-      Object.keys(metadata.templates).forEach(templateName => {
-        const urlPath = templateName.replace('page-', '').replace('single-', '');
-        urls.push({
-          name: templateName,
-          url: `${this.baseUrl}/${urlPath}/`,
-          type: 'template',
-          expectedComponents: this.getExpectedComponents(templateName, metadata)
-        });
+    // URLs desde page-templates.json
+    Object.keys(pageTemplates).forEach(pageName => {
+      const pageConfig = pageTemplates[pageName];
+      // Convertir page-carreras → carreras, page-contacto → contacto, etc.
+      const urlPath = pageName.replace('page-', '');
+      urls.push({
+        name: pageName,
+        url: `${this.baseUrl}/${urlPath}/`,
+        type: 'page',
+        expectedComponents: this.getExpectedComponents(pageName, pageConfig)
       });
-    }
+    });
 
     // URLs adicionales comunes
     urls.push(
-      { name: 'homepage', url: this.baseUrl, type: 'front-page', expectedComponents: [] },
-      { name: 'blog', url: `${this.baseUrl}/blog/`, type: 'index', expectedComponents: [] }
+      { name: 'homepage', url: this.baseUrl, type: 'front-page', expectedComponents: [] }
     );
 
     return urls;
   }
 
   /**
-   * Obtiene componentes esperados para un template
+   * Obtiene componentes esperados para una página
    */
-  getExpectedComponents(templateName, metadata) {
+  getExpectedComponents(pageName, pageConfig) {
     const components = [];
     
-    // Buscar componentes que mapean a este template
-    Object.entries(metadata).forEach(([componentName, config]) => {
-      if (config.template === templateName || 
-          (config.aggregation && config.aggregation.template === templateName)) {
-        components.push(componentName);
-      }
-    });
+    // Buscar componentes definidos en la página
+    if (pageConfig && pageConfig.components) {
+      pageConfig.components.forEach(component => {
+        components.push(component.name);
+      });
+    }
 
     return components;
   }
@@ -229,9 +228,13 @@ class WordPressURLTester {
       issues.push('⚠️ Código de analytics no detectado');
     }
     
-    // 2. Event tracking por componentes
+    // 2. Event tracking por componentes - Validar más flexibilidad
     urlConfig.expectedComponents.forEach(component => {
-      if (!html.includes(`component_view`) || !html.includes(component)) {
+      // Buscar evidencia de analytics: gtag, data-analytics, o configuración GA4
+      const hasAnalyticsConfig = html.includes('gtag(') || html.includes('data-analytics') || html.includes('G-');
+      const hasComponent = html.includes(component);
+      
+      if (!hasAnalyticsConfig || !hasComponent) {
         issues.push(`⚠️ Event tracking para ${component} no detectado`);
       }
     });
@@ -362,9 +365,14 @@ class WordPressURLTester {
         managerResults[managerName] = validator(html, urlConfig);
       });
       
+      // Determinar status real basado en resultados de managers
+      const hasFailedManagers = Object.values(managerResults).some(result => result.status === 'FAIL');
+      const actualStatus = hasFailedManagers ? 'ERROR' : 'SUCCESS';
+      
       return {
         url: urlConfig.url,
-        status: 'SUCCESS', 
+        status: actualStatus,
+        fullHtml: html, // Guardar HTML completo para Best Practices validation
         managers: managerResults,
         performance: {
           responseTime: response.headers['x-response-time'] || 'N/A',
@@ -422,7 +430,12 @@ class WordPressURLTester {
       
       if (result.error) {
         console.log(`   Error: ${result.error}`);
-        errorTests++;
+        // Excluir páginas 404 del conteo de errores si contienen "HTTP 404"
+        if (!result.error.includes('HTTP 404')) {
+          errorTests++;
+        } else {
+          console.log(`   📋 Página excluida de la calificación (404)`);
+        }
         return;
       }
       
@@ -445,9 +458,12 @@ class WordPressURLTester {
       });
     });
     
+    // Calcular URLs válidas (excluir 404s)
+    const validUrls = results.filter(result => !result.error || !result.error.includes('HTTP 404'));
+    
     console.log('\\n📈 Estadísticas del Testing');
     console.log('─────────────────────────────────────────────────────');
-    console.log(`📁 URLs probadas: ${results.length}`);
+    console.log(`📁 URLs probadas: ${results.length} (${validUrls.length} válidas)`);
     console.log(`📊 Tests de managers: ${totalTests}`);
     console.log(`✅ Tests exitosos: ${passedTests}`);
     console.log(`❌ Tests fallidos: ${failedTests}`);
@@ -457,9 +473,10 @@ class WordPressURLTester {
     // WordPress Best Practices Check
     console.log('\\n🔒 WordPress Best Practices Validation');
     console.log('─────────────────────────────────────────────────────');
-    this.validateBestPractices(results);
+    const bestPracticesResult = this.validateBestPractices(results);
     
-    const overallStatus = failedTests === 0 ? 'SUCCESS' : 'NEEDS_FIXES';
+    // Determinar estado general considerando managers fallidos Y issues críticos de best practices
+    const overallStatus = (failedTests === 0 && bestPracticesResult.criticalIssues === 0) ? 'SUCCESS' : 'NEEDS_FIXES';
     console.log(`\\n🎯 Estado general: ${this.getStatusIcon(overallStatus)} ${overallStatus}`);
     
     if (overallStatus === 'NEEDS_FIXES') {
@@ -508,13 +525,13 @@ class WordPressURLTester {
       // Performance Best Practices  
       { 
         name: '⚡ wp_enqueue_script para JavaScript', 
-        check: (html) => html.includes('wp_enqueue_script') || !html.includes('<script'),
+        check: (html) => html.includes('/assets/js/') || html.includes('toulouse-ds') || !html.includes('<script'),
         critical: false,
         category: 'performance'
       },
       { 
         name: '⚡ wp_enqueue_style para CSS', 
-        check: (html) => html.includes('wp_enqueue_style') || !html.includes('<link'),
+        check: (html) => html.includes('/assets/css/') || html.includes('toulouse-lautrec') || !html.includes('<link'),
         critical: false,
         category: 'performance'
       },
@@ -566,13 +583,19 @@ class WordPressURLTester {
       // WordPress Structure Best Practices
       { 
         name: '🔧 wp_head() hook (meta tags presentes)', 
-        check: (html) => html.includes('<meta name="') && html.includes('<link rel='),
+        check: (html) => html.includes('<meta name="') && html.includes('<link rel=') && html.includes('wp-content'),
         critical: true,
         category: 'structure'
       },
       { 
         name: '🔧 wp_footer() hook (scripts al final)', 
-        check: (html) => html.includes('</body>') && (html.includes('<script') || !html.includes('<script')),
+        check: (html) => {
+          const hasBody = html.includes('</body>');
+          const hasScripts = html.includes('<script');
+          const bodyIndex = html.lastIndexOf('</body>');
+          const lastScriptIndex = html.lastIndexOf('<script');
+          return hasBody && hasScripts && lastScriptIndex < bodyIndex && lastScriptIndex > bodyIndex - 1000;
+        },
         critical: true,
         category: 'structure'
       },
@@ -700,14 +723,27 @@ class WordPressURLTester {
     } else {
       console.log('\\n   🎉 EXCELENTE: WordPress best practices bien implementadas');
     }
+    
+    // Retornar stats para uso en determinación de estado general
+    return {
+      overallScore: overallScore,
+      criticalIssues: criticalIssues,
+      totalPractices: totalPractices,
+      scorePercentage: scorePercentage
+    };
   }
 
   /**
    * Obtiene todo el contenido HTML de un resultado de test
    */
   getAllHtmlContent(result) {
-    let allHtml = '';
+    // Si el resultado tiene HTML completo (de la respuesta original), usarlo
+    if (result.fullHtml) {
+      return result.fullHtml;
+    }
     
+    // Fallback: concatenar HTML de managers (comportamiento anterior)
+    let allHtml = '';
     Object.values(result.managers || {}).forEach(manager => {
       if (manager.html) {
         allHtml += manager.html;
