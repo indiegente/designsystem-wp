@@ -344,20 +344,20 @@ class AssetManager {
       'assets'
     );
 
-    // Generar archivo de configuración de assets
+    // Cargar configuración base desde src/
+    const baseConfigPath = path.join(this.config.srcDir, 'asset-config.json');
+    let baseConfig = {};
+    
+    if (fs.existsSync(baseConfigPath)) {
+      baseConfig = JSON.parse(fs.readFileSync(baseConfigPath, 'utf8'));
+    }
+    
+    // Combinar configuración base con manifest dinámico
     const assetConfig = {
       version: '1.0.0',
-      optimization: this.optimizationConfig,
+      ...baseConfig,
       manifest: this.assetManifest,
-      lazyLoading: {
-        enabled: true,
-        threshold: 0.1,
-        rootMargin: '50px'
-      },
-      preloading: {
-        critical: ['design-tokens.css', 'toulouse-ds.es.js'],
-        async: ['toulouse-ds.umd.js']
-      }
+      timestamp: new Date().toISOString()
     };
 
     const configPath = path.join(themeAssetsDir, 'asset-config.json');

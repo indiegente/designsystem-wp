@@ -129,9 +129,6 @@ get_header();
 
 // Incluir componentes
 ${componentIncludes}
-
-// Renderizar componentes
-${componentRendersString}
 ?>
 
 <main class="${pageName}-content">
@@ -139,7 +136,13 @@ ${componentRendersString}
     // Loop de WordPress - buenas prácticas
     if (have_posts()) :
         while (have_posts()) : the_post();
-            the_content();
+            ?>
+            <!-- Componentes renderizados desde configuración -->
+            ${componentRendersString}
+            
+            <!-- Contenido de la página -->
+            <?php the_content(); ?>
+            <?php
         endwhile;
     endif;
     ?>

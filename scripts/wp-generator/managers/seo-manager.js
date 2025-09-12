@@ -59,6 +59,22 @@ class SEOManager {
               contactType: 'customer service'
             }
           }
+        },
+        'page-test-showcase': {
+          title: 'Test Showcase - Validación Completa | Toulouse Lautrec',
+          description: 'Página de prueba para validar todos los managers del sistema de generación WordPress',
+          keywords: 'test, showcase, managers, wordpress, validation, toulouse lautrec',
+          ogType: 'website',
+          ogImage: 'https://via.placeholder.com/1200x630/0ea5e9/FFFFFF?text=Test+Showcase',
+          schema: {
+            type: 'WebPage',
+            name: 'Test Showcase - Validación Completa',
+            description: 'Página de prueba para validar todos los managers del sistema',
+            mainEntity: {
+              type: 'SoftwareApplication',
+              name: 'Toulouse Design System'
+            }
+          }
         }
       },
       components: {
@@ -85,6 +101,18 @@ class SEOManager {
             itemReviewed: {
               type: 'Organization',
               name: 'Toulouse Lautrec'
+            }
+          }
+        },
+        'test-showcase': {
+          schema: {
+            type: 'WebPage',
+            name: 'Test Showcase - Validación Completa',
+            description: 'Componente de prueba para validar todos los managers',
+            mainEntity: {
+              type: 'SoftwareApplication',
+              name: 'Toulouse Design System',
+              applicationCategory: 'DeveloperApplication'
             }
           }
         }
@@ -189,6 +217,7 @@ class ToulouseSEOManager {
         if (strpos($content, 'testimonials') !== false) {
             $components[] = 'testimonials';
         }
+        
         
         return $components;
     }

@@ -176,7 +176,7 @@ export class TestShowcase extends LitElement {
       { src: 'https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Test+2', alt: 'Test 2' }
     ];
   }
-
+no
   firstUpdated() {
     this.setupAnalyticsEvents();
     this.logComponentLoad();

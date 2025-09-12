@@ -1,0 +1,23 @@
+{
+  "optimization": {
+    "minify": true,
+    "lazyLoad": true,
+    "preloadCritical": true,
+    "imageOptimization": true,
+    "cacheBusting": true
+  },
+  "lazyLoading": {
+    "enabled": true,
+    "threshold": 0.1,
+    "rootMargin": "50px"
+  },
+  "preloading": {
+    "critical": [
+      "design-tokens.css",
+      "toulouse-ds.es.js"
+    ],
+    "async": [
+      "toulouse-ds.umd.js"
+    ]
+  }
+}

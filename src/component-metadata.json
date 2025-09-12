@@ -42,16 +42,6 @@
       "title": "Carreras",
       "description": "Explora nuestras carreras técnicas y programas especializados"
     },
-    "page-contacto": {
-      "file": "page-contacto.php", 
-      "title": "Contacto",
-      "description": "Ponte en contacto con nosotros"
-    },
-    "single-carrera": {
-      "file": "single-carrera.php",
-      "title": "Carrera",
-      "description": "Detalle de carrera"
-    },
     "page-test-showcase": {
       "file": "page-test-showcase.php",
       "title": "Test Showcase - Validación Completa",

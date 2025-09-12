@@ -1,0 +1,20 @@
+{
+  "default": {
+    "title": "Toulouse Lautrec - Design System",
+    "description": "Sistema de diseño modular basado en componentes Lit",
+    "keywords": "diseño, componentes, wordpress, lit",
+    "author": "Toulouse Lautrec",
+    "ogType": "website",
+    "twitterCard": "summary_large_image"
+  },
+  "page-test-showcase": {
+    "title": "Test Showcase - Validación Completa | Toulouse Lautrec",
+    "description": "Página de prueba para validar todos los managers del sistema de generación WordPress",
+    "keywords": "test, showcase, managers, wordpress, validation, toulouse lautrec",
+    "author": "Toulouse Lautrec",
+    "ogType": "website",
+    "ogImage": "https://via.placeholder.com/1200x630/0ea5e9/FFFFFF?text=Test+Showcase",
+    "twitterCard": "summary_large_image",
+    "canonical": "/test-showcase/"
+  }
+}

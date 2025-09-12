@@ -27,7 +27,7 @@ src/
 │   └── README.md                 # Documentación local
 ├── components/                   # Componentes Lit
 ├── component-metadata.json       # Metadata de componentes
-└── page-templates.json           # ⚠️ REQUERIDO: Configuración de páginas (sin fallbacks)
+└── page-templates.json           # ⚠️ REQUERIDO: Páginas personalizadas (fail-fast, sin fallbacks)
 ```
 
 ### Flujo de Carga

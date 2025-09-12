@@ -1,0 +1,18 @@
+{
+  "analytics": {
+    "enabled": true,
+    "googleAnalytics": {
+      "measurementId": "G-ABC123DEF4",
+      "enabled": true
+    },
+    "facebookPixel": {
+      "pixelId": "",
+      "enabled": false
+    },
+    "customEvents": {
+      "pageViews": true,
+      "componentViews": true,
+      "interactions": true
+    }
+  }
+}

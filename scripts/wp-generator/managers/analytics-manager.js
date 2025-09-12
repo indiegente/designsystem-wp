@@ -15,9 +15,16 @@ class AnalyticsManager {
   }
 
   /**
-   * Carga configuración de analytics desde config.js
+   * Carga configuración de analytics desde src/analytics-config.json
    */
   loadAnalyticsConfig() {
+    const configPath = path.join(this.config.srcDir, 'analytics-config.json');
+    
+    if (fs.existsSync(configPath)) {
+      const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      return configData.analytics || {};
+    }
+    
     return this.config.analytics || {
       enabled: false,
       googleAnalytics: { enabled: false },
