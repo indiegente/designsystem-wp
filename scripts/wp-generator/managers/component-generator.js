@@ -195,50 +195,67 @@ class ComponentGenerator {
   }
 
   generateComprehensiveComponent(component, metadata, dataSource) {
-    // Para componentes comprehensive, usar datos reales de component.props
-    const props = component.props || {};
-    
+    // FAIL FAST: componentes comprehensive DEBEN tener wordpressData configurado
+    const wordpressData = metadata.wordpressData;
+
+    if (!wordpressData || !wordpressData.fields) {
+      throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} requiere configuración wordpressData.fields en metadata.json`);
+    }
+
+    // Generar código PHP dinámico usando wordpressData
     const paramValues = metadata.parameters.map(param => {
-      const value = props[param.name] || param.default;
-      
-      if (param.type === 'array' && param.name === 'testImages') {
-        // Convertir array JavaScript a PHP array
-        if (Array.isArray(value)) {
-          const phpArrayItems = value.map(item => 
-            `array('src' => '${item.src}', 'alt' => '${item.alt}')`
-          ).join(', ');
-          return `array(${phpArrayItems})`;
+      const field = wordpressData.fields[param.name];
+      const defaultValue = wordpressData.defaultValues?.[param.name];
+
+      if (!field) {
+        throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} - parámetro '${param.name}' no está mapeado en wordpressData.fields`);
+      }
+
+      // Generar código PHP para obtener el dato de WordPress
+      let phpCode;
+
+      if (field.type === 'native') {
+        switch (field.source) {
+          case 'post_title':
+            phpCode = `get_the_title()`;
+            break;
+          case 'post_excerpt':
+            phpCode = `get_the_excerpt()`;
+            break;
+          case 'post_content':
+            phpCode = `get_the_content()`;
+            break;
+          case 'post_thumbnail_url':
+            phpCode = `get_the_post_thumbnail_url(get_the_ID(), 'full')`;
+            break;
+          default:
+            phpCode = `get_post_meta(get_the_ID(), '${field.source}', true)`;
         }
-        return 'array()';
-      } else if (param.type === 'object' && param.name === 'testData') {
-        // Convertir object JavaScript a PHP array
-        if (typeof value === 'object' && value !== null) {
-          const phpObjectItems = [];
-          for (const [key, val] of Object.entries(value)) {
-            if (Array.isArray(val)) {
-              const phpArray = val.map(v => `'${v}'`).join(', ');
-              phpObjectItems.push(`'${key}' => array(${phpArray})`);
-            } else if (typeof val === 'object') {
-              const phpSubObject = Object.entries(val).map(([k, v]) => 
-                `'${k}' => '${v}'`
-              ).join(', ');
-              phpObjectItems.push(`'${key}' => array(${phpSubObject})`);
-            } else {
-              phpObjectItems.push(`'${key}' => '${val}'`);
-            }
-          }
-          return `array(${phpObjectItems.join(', ')})`;
-        }
-        return 'array()';
-      } else if (param.type === 'boolean') {
-        return value === 'true' || value === true ? 'true' : 'false';
+      } else if (field.type === 'acf') {
+        phpCode = `get_field('${field.source}')`;
       } else {
-        return `'${value}'`;
+        throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} - tipo de field '${field.type}' no soportado. Use 'native' o 'acf'`);
+      }
+
+      // Agregar fallback SOLO si hay defaultValues configurados
+      if (defaultValue !== undefined) {
+        if (param.type === 'string') {
+          return `${phpCode} ?: '${defaultValue}'`;
+        } else if (param.type === 'boolean') {
+          const boolDefault = defaultValue === 'true' || defaultValue === true ? 'true' : 'false';
+          return `${phpCode} ?: ${boolDefault}`;
+        } else if (param.type === 'array') {
+          return `${phpCode} ?: array()`;
+        } else {
+          return `${phpCode} ?: '${defaultValue}'`;
+        }
+      } else {
+        // Sin defaultValues: usar directamente el valor de WordPress (puede ser vacío)
+        return phpCode;
       }
     });
-    
+
     const paramsString = paramValues.join(', ');
-    
     return `<?php ${metadata.phpFunction}(${paramsString}); ?>`;
   }
 

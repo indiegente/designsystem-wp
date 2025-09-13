@@ -160,7 +160,7 @@
     }
   },
   "interactive-gallery": {
-    "type": "interactive",
+    "type": "comprehensive",
     "phpFunction": "render_interactive_gallery",
     "parameters": [
       { "name": "title", "type": "string", "default": "" },
@@ -170,11 +170,42 @@
       { "name": "showThumbnails", "type": "boolean", "default": "true" }
     ],
     "template": "interactive-gallery",
+    "wordpressData": {
+      "fields": {
+        "title": {
+          "source": "post_title",
+          "type": "native"
+        },
+        "subtitle": {
+          "source": "post_excerpt",
+          "type": "native"
+        },
+        "images": {
+          "source": "meta_gallery_images",
+          "type": "acf"
+        },
+        "autoPlay": {
+          "source": "meta_auto_play",
+          "type": "acf"
+        },
+        "showThumbnails": {
+          "source": "meta_show_thumbnails",
+          "type": "acf"
+        }
+      },
+      "defaultValues": {
+        "title": "Galería Interactiva",
+        "subtitle": "Explora nuestra colección",
+        "images": "[]",
+        "autoPlay": "true",
+        "showThumbnails": "true"
+      }
+    },
     "interaction": {
       "mode": "stateful",
       "events": [
         "image-changed",
-        "autoplay-toggled", 
+        "autoplay-toggled",
         "lightbox-open"
       ],
       "stateManagement": true

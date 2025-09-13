@@ -55,7 +55,7 @@
           "link_text": "Ver carrera"
         },
         "dataSource": {
-          "type": "wordpress_posts",
+          "type": "post",
           "postType": "carrera",
           "query": {
             "numberposts": -1,
@@ -76,7 +76,7 @@
           "subtitle": "Testimonios de éxito de nuestros egresados"
         },
         "dataSource": {
-          "type": "wordpress_posts",
+          "type": "post",
           "postType": "testimonio",
           "query": {
             "numberposts": 6,

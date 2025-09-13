@@ -17,6 +17,7 @@ Este tutorial te guía paso a paso desde la creación de un componente Lit en St
 - [🔧 Personalización Avanzada](#-personalización-avanzada)
 - [🚀 Despliegue en Producción](#-despliegue-en-producción)
 - [🛠️ Troubleshooting](#️-troubleshooting)
+- [🚨 Comportamiento Fail-Fast](#-comportamiento-fail-fast)
 
 ## 🎯 Objetivo
 
@@ -1769,42 +1770,42 @@ ln -s $(pwd)/wordpress-output/toulouse-lautrec /path/to/wp-content/themes/toulou
 
 ## 🔧 Personalización Avanzada
 
-### Agregar Campos Personalizados
+### Agregar Campos Personalizados para Testimonios
 
-Para que los productos tengan todos los campos necesarios, agrega esto a `functions.php`:
+Para agregar campos personalizados que funcionen con los componentes actuales, agrega esto a `functions.php`:
 
 ```php
-// Campos personalizados para productos
-function toulouse_add_product_meta_boxes() {
+// Campos personalizados para testimonios
+function toulouse_add_testimonial_meta_boxes() {
     add_meta_box(
-        'product_details',
-        'Detalles del Producto',
-        'toulouse_product_meta_box_callback',
-        'producto'
+        'testimonial_details',
+        'Detalles del Testimonio',
+        'toulouse_testimonial_meta_box_callback',
+        'testimonio'
     );
 }
-add_action('add_meta_boxes', 'toulouse_add_product_meta_boxes');
+add_action('add_meta_boxes', 'toulouse_add_testimonial_meta_boxes');
 
-function toulouse_product_meta_box_callback($post) {
-    wp_nonce_field('toulouse_save_product_meta', 'toulouse_product_meta_nonce');
+function toulouse_testimonial_meta_box_callback($post) {
+    wp_nonce_field('toulouse_save_testimonial_meta', 'toulouse_testimonial_meta_nonce');
     
-    $price = get_post_meta($post->ID, 'price', true);
-    $category = get_post_meta($post->ID, 'category', true);
-    $featured = get_post_meta($post->ID, 'featured', true);
+    $rating = get_post_meta($post->ID, 'rating', true) ?: '5';
+    $avatar = get_post_meta($post->ID, 'avatar', true);
+    $course = get_post_meta($post->ID, 'course', true);
     
     echo '<table class="form-table">';
-    echo '<tr><th><label for="product_price">Precio</label></th>';
-    echo '<td><input type="text" id="product_price" name="product_price" value="' . esc_attr($price) . '" /></td></tr>';
-    echo '<tr><th><label for="product_category">Categoría</label></th>';
-    echo '<td><input type="text" id="product_category" name="product_category" value="' . esc_attr($category) . '" /></td></tr>';
-    echo '<tr><th><label for="product_featured">Destacado</label></th>';
-    echo '<td><input type="checkbox" id="product_featured" name="product_featured" value="1" ' . checked(1, $featured, false) . ' /></td></tr>';
+    echo '<tr><th><label for="testimonial_rating">Calificación (1-5)</label></th>';
+    echo '<td><input type="number" id="testimonial_rating" name="testimonial_rating" min="1" max="5" value="' . esc_attr($rating) . '" /></td></tr>';
+    echo '<tr><th><label for="testimonial_avatar">URL del Avatar</label></th>';
+    echo '<td><input type="url" id="testimonial_avatar" name="testimonial_avatar" value="' . esc_attr($avatar) . '" class="regular-text" /></td></tr>';
+    echo '<tr><th><label for="testimonial_course">Curso/Carrera</label></th>';
+    echo '<td><input type="text" id="testimonial_course" name="testimonial_course" value="' . esc_attr($course) . '" class="regular-text" /></td></tr>';
     echo '</table>';
 }
 
-function toulouse_save_product_meta($post_id) {
-    if (!isset($_POST['toulouse_product_meta_nonce']) || 
-        !wp_verify_nonce($_POST['toulouse_product_meta_nonce'], 'toulouse_save_product_meta')) {
+function toulouse_save_testimonial_meta($post_id) {
+    if (!isset($_POST['toulouse_testimonial_meta_nonce']) || 
+        !wp_verify_nonce($_POST['toulouse_testimonial_meta_nonce'], 'toulouse_save_testimonial_meta')) {
         return;
     }
 
@@ -1816,81 +1817,111 @@ function toulouse_save_product_meta($post_id) {
         return;
     }
 
-    if (isset($_POST['product_price'])) {
-        update_post_meta($post_id, 'price', sanitize_text_field($_POST['product_price']));
+    if (isset($_POST['testimonial_rating'])) {
+        $rating = intval($_POST['testimonial_rating']);
+        $rating = max(1, min(5, $rating)); // Asegurar que esté entre 1-5
+        update_post_meta($post_id, 'rating', $rating);
     }
 
-    if (isset($_POST['product_category'])) {
-        update_post_meta($post_id, 'category', sanitize_text_field($_POST['product_category']));
+    if (isset($_POST['testimonial_avatar'])) {
+        update_post_meta($post_id, 'avatar', esc_url($_POST['testimonial_avatar']));
     }
 
-    $featured = isset($_POST['product_featured']) ? 1 : 0;
-    update_post_meta($post_id, 'featured', $featured);
+    if (isset($_POST['testimonial_course'])) {
+        update_post_meta($post_id, 'course', sanitize_text_field($_POST['testimonial_course']));
+    }
 }
-add_action('save_post', 'toulouse_save_product_meta');
+add_action('save_post', 'toulouse_save_testimonial_meta');
 ```
 
-### Crear Shortcode para Usar Fuera de Templates
+### Crear Shortcodes para Componentes
 
 ```php
-// Shortcode para usar product-card en cualquier lugar
-function toulouse_product_card_shortcode($atts) {
+// Shortcode para hero-section
+function toulouse_hero_section_shortcode($atts) {
     $atts = shortcode_atts(array(
-        'ids' => '',
-        'category' => '',
-        'featured' => '',
+        'title' => 'Título por defecto',
+        'subtitle' => 'Subtítulo por defecto',
+        'cta_text' => 'Conocer más',
+        'background_image' => ''
+    ), $atts);
+
+    ob_start();
+    render_hero_section(
+        $atts['title'],
+        $atts['subtitle'],
+        $atts['cta_text'],
+        $atts['background_image']
+    );
+    return ob_get_clean();
+}
+add_shortcode('hero_section', 'toulouse_hero_section_shortcode');
+
+// Shortcode para testimonials
+function toulouse_testimonials_shortcode($atts) {
+    $atts = shortcode_atts(array(
+        'title' => 'Testimonios',
+        'subtitle' => 'Lo que dicen nuestros estudiantes',
+        'limit' => 6
+    ), $atts);
+
+    $testimonials = get_posts(array(
+        'post_type' => 'testimonio',
+        'posts_per_page' => intval($atts['limit']),
+        'post_status' => 'publish'
+    ));
+
+    $testimonials_data = array();
+    foreach ($testimonials as $testimonial) {
+        setup_postdata($testimonial);
+        $testimonials_data[] = array(
+            'name' => get_the_title(),
+            'role' => get_the_excerpt(),
+            'content' => get_the_content(),
+            'rating' => get_post_meta(get_the_ID(), 'rating', true) ?: '5',
+            'avatar' => get_post_meta(get_the_ID(), 'avatar', true) ?: '',
+            'course' => get_post_meta(get_the_ID(), 'course', true) ?: ''
+        );
+    }
+    wp_reset_postdata();
+
+    ob_start();
+    render_testimonials($atts['title'], $atts['subtitle'], $testimonials_data);
+    return ob_get_clean();
+}
+add_shortcode('testimonials', 'toulouse_testimonials_shortcode');
+
+// Shortcode para course-card
+function toulouse_course_cards_shortcode($atts) {
+    $atts = shortcode_atts(array(
         'limit' => -1,
         'orderby' => 'date',
         'order' => 'DESC'
     ), $atts);
 
-    $query_args = array(
-        'post_type' => 'producto',
+    $courses = get_posts(array(
+        'post_type' => 'carrera',
         'posts_per_page' => intval($atts['limit']),
         'orderby' => $atts['orderby'],
-        'order' => $atts['order']
-    );
+        'order' => $atts['order'],
+        'post_status' => 'publish'
+    ));
 
-    if (!empty($atts['ids'])) {
-        $query_args['post__in'] = explode(',', $atts['ids']);
-    }
-
-    if (!empty($atts['category'])) {
-        $query_args['meta_query'][] = array(
-            'key' => 'category',
-            'value' => $atts['category'],
-            'compare' => '='
-        );
-    }
-
-    if (!empty($atts['featured'])) {
-        $query_args['meta_query'][] = array(
-            'key' => 'featured',
-            'value' => '1',
-            'compare' => '='
-        );
-    }
-
-    $products = get_posts($query_args);
-    
-    if (empty($products)) {
-        return '<p>No se encontraron productos.</p>';
+    if (empty($courses)) {
+        return '<p>No se encontraron carreras.</p>';
     }
 
     ob_start();
-    echo '<div class="product-grid">';
+    echo '<div class="course-cards-grid">';
     
-    foreach ($products as $product) {
-        setup_postdata($product);
-        render_product_card(
+    foreach ($courses as $course) {
+        setup_postdata($course);
+        render_course_card(
             get_the_title(),
             get_the_excerpt(),
-            get_post_meta(get_the_ID(), 'price', true),
             get_the_post_thumbnail_url(get_the_ID(), 'medium'),
-            get_post_meta(get_the_ID(), 'category', true),
-            get_post_meta(get_the_ID(), 'featured', true),
             get_permalink(),
-            'Ver producto'
+            'Ver carrera'
         );
     }
     wp_reset_postdata();
@@ -1898,15 +1929,129 @@ function toulouse_product_card_shortcode($atts) {
     echo '</div>';
     return ob_get_clean();
 }
-add_shortcode('product_cards', 'toulouse_product_card_shortcode');
+add_shortcode('course_cards', 'toulouse_course_cards_shortcode');
 ```
 
-Uso del shortcode:
+### Uso de los Shortcodes
 
 ```
-[product_cards limit="4" featured="1"]
-[product_cards category="diseño" limit="6"]
-[product_cards ids="1,5,10"]
+<!-- Hero Section personalizado -->
+[hero_section title="Bienvenido" subtitle="Descubre nuestros cursos" cta_text="Explorar"]
+
+<!-- Testimonios limitados -->
+[testimonials title="Testimonios Destacados" limit="3"]
+
+<!-- Tarjetas de carreras -->
+[course_cards limit="4" order="ASC"]
+```
+
+### Sistema de Extensiones
+
+El sistema incluye un potente sistema de extensiones que permite agregar funcionalidades sin modificar el código base:
+
+#### Crear una Extensión Personalizada
+
+Crea un archivo en `src/extensions/mi-extension.js`:
+
+```javascript
+module.exports = function(config) {
+  return {
+    name: 'mi-extension',
+    
+    hooks: {
+      // Se ejecuta antes de renderizar un componente
+      beforeComponentRender: (component, context) => {
+        console.log(`Renderizando: ${component.name}`);
+        return { component, context };
+      },
+      
+      // Se ejecuta después de renderizar un componente
+      afterComponentRender: (component, context, result) => {
+        // Agregar analytics personalizado
+        const analyticsCode = `
+          <!-- Analytics personalizado para ${component.name} -->
+          <script>
+            console.log('Componente ${component.name} renderizado');
+          </script>
+        `;
+        
+        return result + analyticsCode;
+      },
+      
+      // Se ejecuta antes de generar un template
+      beforeTemplateGeneration: (templateName, context) => {
+        console.log(`Generando template: ${templateName}`);
+        return { templateName, context };
+      },
+      
+      // Se ejecuta después de generar un template
+      afterTemplateGeneration: (templateName, context, result) => {
+        console.log(`Template ${templateName} generado exitosamente`);
+        return result;
+      }
+    },
+    
+    // Agregar tipos de componentes personalizados
+    componentTypes: {
+      'custom-banner': {
+        render: (props, context) => {
+          return `
+            <div class="custom-banner">
+              <h2>${props.title || 'Banner Personalizado'}</h2>
+              <p>${props.message || 'Mensaje del banner'}</p>
+            </div>
+          `;
+        }
+      }
+    }
+  };
+};
+```
+
+#### Extensiones de Analytics Incluidas
+
+El sistema incluye extensiones preconfiguradas para analytics:
+
+- **GA4 Data Layer**: `scripts/wp-generator/extensions/analytics/ga4-data-layer.js`
+- **Facebook Pixel**: `scripts/wp-generator/extensions/analytics/facebook-pixel.js`
+- **Custom Events**: `scripts/wp-generator/extensions/analytics/custom-events.js`
+
+#### Configurar Analytics
+
+Edita `scripts/wp-generator/core/config.js` para habilitar analytics:
+
+```javascript
+analytics: {
+  enabled: true,
+  googleAnalytics: {
+    measurementId: 'G-TU-MEASUREMENT-ID',
+    enabled: true
+  },
+  facebookPixel: {
+    pixelId: 'TU-PIXEL-ID',
+    enabled: true
+  },
+  customEvents: {
+    pageViews: true,
+    componentViews: true,
+    interactions: true
+  }
+}
+```
+
+### Validación de Configuración
+
+El sistema incluye validación estricta que detecta inconsistencias:
+
+```bash
+# Validar solo el renderizado de componentes
+npm run wp:validate:render
+
+# Validación completa (híbrida)
+npm run wp:validate
+
+# Generar con validación estricta (falla si hay inconsistencias)
+npm run wp:generate
 ```
 
 ## 🚀 Despliegue en Producción
@@ -2040,6 +2185,96 @@ Has completado exitosamente el tutorial end-to-end. Ahora tienes:
 - [WordPress Theme Handbook](https://developer.wordpress.org/themes/)
 - [Guía de Extensiones](./EXTENSIONS_GUIDE.md)
 - [Documentación del Proyecto](./README.md)
+
+## 🚨 Comportamiento Fail-Fast
+
+### ⚠️ CRÍTICO: Sistema de Rollback Automático
+
+El generador implementa **fail-fast con rollback completo** para garantizar calidad profesional:
+
+#### 🔄 ¿Cuándo ocurre rollback?
+
+1. **Error de sintaxis PHP** en archivos generados
+2. **Dependencias faltantes** (Composer, PHPCS, Lighthouse)
+3. **Validaciones de calidad fallidas** (PHPCS, managers)
+4. **Configuración inconsistente** en metadata.json
+
+#### 🚨 Ejemplo Real: hero-section tipo "aggregated"
+
+**Problema identificado:**
+```bash
+❌ Error de sintaxis PHP en page-carreras.php. No se escribió el archivo.
+❌ Error de sintaxis PHP en page-contacto.php. No se escribió el archivo.
+🔄 Haciendo rollback completo...
+✅ Rollback completado. No se dejaron archivos con errores.
+```
+
+**Causa:** Cambiar `hero-section` de `"type": "static"` a `"type": "aggregated"` sin configuración correcta causó código PHP inválido.
+
+**Resultado del rollback:**
+- ✅ Limpió `wordpress-output` completamente
+- ✅ NO dejó archivos parciales o corruptos
+- ✅ Sistema queda en estado limpio
+- ✅ Error reportado claramente
+
+#### ✅ Comportamiento Profesional Correcto
+
+**POR QUÉ ES BUENO:**
+1. **Calidad garantizada**: Solo genera código que funciona 100%
+2. **No archivos corruptos**: Rollback automático previene estados inconsistentes
+3. **Debugging claro**: Mensajes específicos sobre qué falló
+4. **Estado limpio**: Siempre puedes volver a generar desde cero
+
+#### 🔧 Cómo Resolver Errores
+
+**1. Leer mensajes de error específicos:**
+```bash
+❌ Error crítico durante la generación: VALIDACIONES DE CALIDAD FALLARON
+```
+
+**2. Revisar configuraciones antes de generar:**
+- ✅ Metadata.json coherente con tipos de componente
+- ✅ page-templates.json compatible con metadata
+- ✅ Dependencias instaladas (npm run setup)
+
+**3. Usar Node.js correcto:**
+```bash
+nvm use 24  # OBLIGATORIO antes de npm run wp:generate
+```
+
+#### 📋 Tipos de Componente vs DataSource
+
+| Tipo Componente | Configuración Soportada | DataSource | Resultado |
+|------|---------------|-----|-----------|
+| `static` | Solo `props` | ❌ NO soportado | Valores fijos hardcodeados |
+| `iterative` | `dataSource` | ✅ Sí | Loops WordPress dinámicos |
+| `aggregated` | `dataSource` + `aggregation` | ✅ Sí | Arrays de datos |
+| `comprehensive` | Complejo | ✅ Sí | Múltiples fuentes |
+
+#### 🚨 Limitaciones Críticas del Sistema
+
+**❌ INCOMPATIBLE: `"type": "static"` + `dataSource`**
+- Los componentes estáticos NO pueden usar dataSource
+- Error: "Parámetro esperado pero no proporcionado"
+- Solo funcionan con `props` hardcodeados
+
+**✅ TIPOS VÁLIDOS DE DATASOURCE:**
+```javascript
+validTypes: ['post', 'page', 'custom', 'api']
+```
+
+**❌ TIPOS INVÁLIDOS:**
+- `"wordpress_posts"` → Usar `"post"`
+- `"wordpress_page"` → Usar `"page"`
+
+#### 🎯 Recomendación
+
+**SIEMPRE probar configuraciones gradualmente:**
+1. Empezar con `"type": "static"` y `props` hardcodeados
+2. Cambiar a dinámico solo cuando esté funcionando
+3. Un cambio a la vez, no múltiples simultáneos
+
+**El fail-fast es tu amigo - te protege de deployar código roto.**
 
 ---
 
