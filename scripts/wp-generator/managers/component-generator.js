@@ -91,27 +91,90 @@ class ComponentGenerator {
   generateIterativeComponent(component, metadata, dataSource) {
     const query = dataSource?.query || {};
     const queryString = this.buildQueryString(query, component.name);
-    
+    const mapping = dataSource?.mapping || {};
+
     const paramMappings = metadata.parameters.map(param => {
-      if (param.name === 'title') return 'get_the_title()';
-      if (param.name === 'description') return 'get_the_excerpt()';
-      if (param.name === 'image') return 'get_the_post_thumbnail_url(get_the_ID(), \'medium\')';
-      if (param.name === 'link') return 'get_permalink()';
-      if (param.name === 'link_text') return `'${param.default}'`;
-      return `'${param.default}'`;
+      // Use dataSource mapping if available
+      if (mapping[param.name]) {
+        const mapValue = mapping[param.name];
+
+        // Handle robust structure: { source: "meta_field", type: "acf" }
+        if (typeof mapValue === 'object' && mapValue.source && mapValue.type) {
+          const source = mapValue.source;
+          const fieldType = mapValue.type;
+
+          // Soporte para valores estáticos
+          if (fieldType === 'static') {
+            return `'${source}'`;
+          }
+
+          if (source === 'post_title') return 'get_the_title($item)';
+          if (source === 'post_excerpt') return 'get_the_excerpt($item)';
+          if (source === 'post_content') return 'get_the_content(null, false, $item)';
+          if (source === 'post_thumbnail_url') return 'get_the_post_thumbnail_url($item, \'medium\')';
+          if (source === 'post_permalink') return 'get_permalink($item)';
+
+          if (source.startsWith('meta_')) {
+            const metaKey = source.replace('meta_', '');
+            if (fieldType === 'acf') {
+              return `get_field('${metaKey}', $item->ID)`;
+            } else {
+              return `get_post_meta($item->ID, '${metaKey}', true)`;
+            }
+          }
+
+          if (fieldType === 'native') {
+            return `'${source}'`;
+          }
+
+          throw new Error(`❌ ITERATIVE COMPONENT ERROR: ${component.name}.${param.name} - tipo '${fieldType}' no soportado. Use: 'native', 'acf', 'static'`);
+        }
+
+        // FAIL FAST: Legacy string mappings no soportados - usar nueva estructura
+        if (typeof mapValue === 'string') {
+          throw new Error(`❌ ITERATIVE COMPONENT ERROR: ${component.name}.${param.name} usa mapeo legacy no soportado.
+
+🔧 MIGRACIÓN REQUERIDA - Cambiar de:
+"mapping": {
+  "${param.name}": "${mapValue}"
+}
+
+✅ A estructura nueva:
+"mapping": {
+  "${param.name}": {
+    "source": "${mapValue}",
+    "type": "${mapValue.startsWith('meta_') || mapValue.startsWith('acf_') ? 'acf' : 'native'}"
+  }
+}
+
+💡 UBICACIÓN: src/page-templates.json → componente "${component.name}" → dataSource.mapping
+🚨 SIN BACKWARD COMPATIBILITY: Solo nueva arquitectura soportada`);
+        }
+      }
+
+      // FAIL FAST: No fallbacks silenciosos - configuración explícita requerida
+      throw new Error(`❌ ITERATIVE COMPONENT ERROR: ${component.name}.${param.name} no está configurado en dataSource.mapping. Configure explícitamente en page-templates.json:
+
+📋 EJEMPLO REQUERIDO:
+"dataSource": {
+  "mapping": {
+    "${param.name}": "post_title|post_excerpt|post_thumbnail_url|post_permalink|meta_[campo]"
+  }
+}
+
+💡 UBICACIÓN: src/page-templates.json → componente "${component.name}"
+🚨 SIN FALLBACKS: Configuración explícita obligatoria para calidad profesional`);
     });
-    
+
     const paramsString = paramMappings.join(',\n          ');
-    
+
     return `<?php
     $items = get_posts(array(${queryString}));
-    
+
     if (!empty($items)) {
       foreach ($items as $item) {
-        setup_postdata($item);
         ${metadata.phpFunction}(${paramsString});
       }
-      wp_reset_postdata();
     }
     ?>`;
   }
@@ -119,7 +182,8 @@ class ComponentGenerator {
   generateAggregatedComponent(component, metadata, dataSource) {
     const query = dataSource?.query || {};
     const queryString = this.buildQueryString(query, component.name);
-    const aggregation = metadata.aggregation;
+    // FUENTE ÚNICA DE VERDAD: Usar aggregation de dataSource (page-templates.json)
+    const aggregation = dataSource?.aggregation || metadata.aggregation;
     
     const dataStructure = aggregation.dataStructure;
     const defaultValues = aggregation.defaultValues || {};
@@ -147,24 +211,21 @@ class ComponentGenerator {
         }
         else mapping = `'${source}'`;
       }
-      // Backward compatibility - estructura anterior
-      else if (typeof value === 'string') {
-        if (value === 'post_title') mapping = 'get_the_title()';
-        else if (value === 'post_excerpt') mapping = 'get_the_excerpt()';
-        else if (value === 'post_content') mapping = 'get_the_content()';
-        else if (value.startsWith('meta_')) {
-          const metaKey = value.replace('meta_', '');
-          const defaultValue = defaultValues[key] || '';
-          
-          // Check fieldTypes for ACF vs native
-          const fieldTypes = metadata.fieldTypes || {};
-          if (fieldTypes[key] === 'acf') {
-            mapping = `get_field('${metaKey}') ?: '${defaultValue}'`;
-          } else {
-            mapping = `get_post_meta(get_the_ID(), '${metaKey}', true) ?: '${defaultValue}'`;
-          }
-        }
-        else mapping = `'${value}'`;
+      // FAIL FAST: Estructura legacy no soportada - migrar a arquitectura unificada
+      else {
+        throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} - campo '${key}' usa estructura legacy no soportada.
+
+🔧 MIGRACIÓN REQUERIDA - Cambiar de:
+"${key}": "${value}"
+
+✅ A estructura nueva:
+"${key}": {
+  "source": "${typeof value === 'string' && value.startsWith('meta_') ? value : 'post_title|post_excerpt|post_content'}",
+  "type": "${typeof value === 'string' && value.startsWith('meta_') ? 'acf' : 'native'}"
+}
+
+💡 UBICACIÓN: src/page-templates.json → dataSource.wordpressData.fields
+🚨 SIN BACKWARD COMPATIBILITY: Solo arquitectura unificada soportada`);
       }
       
       return `'${key}' => ${mapping}`;
@@ -195,11 +256,11 @@ class ComponentGenerator {
   }
 
   generateComprehensiveComponent(component, metadata, dataSource) {
-    // FAIL FAST: componentes comprehensive DEBEN tener wordpressData configurado
-    const wordpressData = metadata.wordpressData;
+    // FUENTE ÚNICA DE VERDAD: Usar wordpressData de dataSource (page-templates.json)
+    const wordpressData = dataSource?.wordpressData || metadata.wordpressData;
 
     if (!wordpressData || !wordpressData.fields) {
-      throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} requiere configuración wordpressData.fields en metadata.json`);
+      throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} requiere configuración wordpressData.fields en page-templates.json`);
     }
 
     // Generar código PHP dinámico usando wordpressData
@@ -259,22 +320,20 @@ class ComponentGenerator {
     return `<?php ${metadata.phpFunction}(${paramsString}); ?>`;
   }
 
-  generateFallbackCode(component, dataSource) {
-    const componentName = component.name.replace('-', '_');
-    const query = dataSource?.query || {};
-    const queryString = this.buildQueryString(query, component.name);
-    
-    return `
-    // Código fallback para ${componentName}
-    $items = get_posts(array(${queryString}));
-    
-    if (!empty($items)) {
-      foreach ($items as $item) {
-        setup_postdata($item);
-        // render_${componentName}() - implementar según necesidad
-      }
-      wp_reset_postdata();
-    }`;
+  generateFallbackCode(component) {
+    // FAIL FAST: No generar código fallback silencioso
+    throw new Error(`❌ COMPONENT GENERATION ERROR: ${component.name} requiere configuración específica según su tipo.
+
+🔧 TIPOS SOPORTADOS:
+- static: Solo props, sin dataSource
+- iterative: dataSource con mapping explícito
+- aggregated: dataSource con aggregation configurado
+- comprehensive: dataSource con wordpressData.fields
+
+💡 UBICACIÓN: src/metadata.json → "${component.name}.type"
+📋 EJEMPLO: Cambiar a tipo específico según necesidad
+
+🚨 SIN FALLBACKS GENÉRICOS: Configuración explícita obligatoria para calidad profesional`);
   }
 
   buildQueryString(query, componentName) {

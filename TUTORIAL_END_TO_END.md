@@ -457,6 +457,307 @@ Navega a `http://localhost:6006` y verifica que:
 
 La metadata es el corazón del sistema de generación automática. Define cómo cada componente Lit se convierte en PHP, qué datos consume, y cómo se integra con WordPress.
 
+#### 📚 **ARQUITECTURA UNIFICADA: wordpressData vs dataSource**
+
+**🔑 CONCEPTO CLAVE**: El sistema usa **DOS niveles de configuración** para máxima flexibilidad:
+
+##### **1. `dataSource` (en page-templates.json)**
+- **QUÉ datos usar**: Define el TIPO de datos WordPress
+- **NIVEL ALTO**: Configuración de la fuente de datos
+- **UBICACIÓN**: `src/page-templates.json`
+
+```json
+{
+  "page-productos": {
+    "components": [{
+      "name": "product-card",
+      "dataSource": "post"  // ← QUÉ: obtener datos de posts
+    }]
+  }
+}
+```
+
+##### **2. `wordpressData` (en metadata.json)**
+- **CÓMO mapear campos**: Define el mapeo ESPECÍFICO de cada propiedad
+- **NIVEL DETALLADO**: Configuración granular de campos
+- **UBICACIÓN**: `src/metadata.json`
+
+```json
+{
+  "product-card": {
+    "wordpressData": {
+      "fields": {
+        "title": {"source": "post_title", "type": "native"},     // ← CÓMO: título viene de post_title
+        "price": {"source": "meta_precio", "type": "acf"},       // ← CÓMO: precio viene de custom field
+        "image": {"source": "post_thumbnail_url", "type": "native"}  // ← CÓMO: imagen viene de thumbnail
+      }
+    }
+  }
+}
+```
+
+##### **🔄 Flujo Completo del Sistema**
+
+```mermaid
+graph TD
+    A[page-templates.json] -->|dataSource: "post"| B[Component Generator]
+    C[metadata.json] -->|wordpressData.fields| B
+    B --> D[Código PHP generado]
+
+    D --> E[Consulta WordPress: get_posts]
+    D --> F[Mapeo de campos: post_title → title]
+    D --> G[Render del componente con datos reales]
+```
+
+##### **📋 Ejemplo Completo: Product Card**
+
+**page-templates.json** (QUÉ datos):
+```json
+{
+  "page-productos": {
+    "components": [{
+      "name": "product-card",
+      "dataSource": "post"  // Obtener posts WordPress
+    }]
+  }
+}
+```
+
+**metadata.json** (CÓMO mapear):
+```json
+{
+  "product-card": {
+    "type": "comprehensive",
+    "wordpressData": {
+      "fields": {
+        "title": {"source": "post_title", "type": "native"},
+        "description": {"source": "post_excerpt", "type": "native"},
+        "price": {"source": "meta_precio", "type": "acf"},
+        "featured": {"source": "meta_destacado", "type": "acf"}
+      }
+    }
+  }
+}
+```
+
+**🎯 PHP Generado Automáticamente:**
+```php
+// El sistema combina ambas configuraciones:
+$productos = get_posts(['post_type' => 'producto']); // ← dataSource: "post"
+foreach ($productos as $post) {
+    render_product_card(
+        $post->post_title,                              // ← wordpressData.fields.title
+        $post->post_excerpt,                            // ← wordpressData.fields.description
+        get_post_meta($post->ID, 'precio', true),      // ← wordpressData.fields.price (ACF)
+        get_post_meta($post->ID, 'destacado', true)    // ← wordpressData.fields.featured (ACF)
+    );
+}
+```
+
+##### **⚡ Tipos de DataSource Válidos**
+
+| DataSource | WordPress Query | Uso Típico |
+|------------|-----------------|------------|
+| `"post"` | `get_posts(['post_type' => 'post'])` | Blog posts, noticias |
+| `"page"` | `get_posts(['post_type' => 'page'])` | Páginas estáticas |
+| `"custom"` | `get_posts(['post_type' => 'producto'])` | Custom Post Types |
+| `"api"` | `wp_remote_get()` | APIs externas |
+
+##### **🔧 Tipos de Field Sources**
+
+| Type | Source Example | WordPress Function |
+|------|----------------|-------------------|
+| `"native"` | `"post_title"` | `get_the_title()` |
+| `"native"` | `"post_excerpt"` | `get_the_excerpt()` |
+| `"native"` | `"post_thumbnail_url"` | `get_the_post_thumbnail_url()` |
+| `"acf"` | `"meta_precio"` | `get_post_meta($id, 'precio', true)` |
+| `"acf"` | `"meta_destacado"` | `get_post_meta($id, 'destacado', true)` |
+
+##### **✅ BENEFICIOS de la Arquitectura Dual**
+
+1. **🎯 Separación de responsabilidades**:
+   - `dataSource`: Configuración de página específica
+   - `wordpressData`: Configuración de componente reutilizable
+
+2. **🔄 Reutilización máxima**:
+   - Un componente (metadata) funciona en múltiples páginas (page-templates)
+   - El mapeo de campos se define una sola vez
+
+3. **🛠️ Flexibilidad total**:
+   - Cambiar fuente de datos sin modificar el componente
+   - Mapear campos diferentes para el mismo componente
+
+4. **🚨 Fail-fast real**:
+   - Validación estricta de ambas configuraciones
+   - Error claro si falta alguna de las dos
+
+##### **⚡ LÓGICA DE PRIORIDAD: props vs dataSource**
+
+**🔑 PREGUNTA CRÍTICA**: Si un componente tiene `props` Y `dataSource`, ¿cuál tiene prioridad?
+
+**📋 RESPUESTA**: Depende del **tipo de componente**:
+
+| Tipo | Prioridad | Comportamiento |
+|------|-----------|----------------|
+| **`static`** | ❌ **SOLO props** | Ignora dataSource (error si existe) |
+| **`iterative`** | 🥇 **dataSource** | WordPress data siempre gana, props solo para fallback |
+| **`aggregated`** | 🔄 **Híbrido** | dataSource para arrays, props para configuración |
+| **`comprehensive`** | 🧠 **Inteligente** | dataSource si existe, props como fallback por campo |
+
+##### **📚 EJEMPLOS DETALLADOS POR TIPO:**
+
+###### **1. Tipo `static` - Solo props**
+```json
+// page-templates.json
+{
+  "name": "hero-section",
+  "props": {
+    "title": "Bienvenido"  // ← ÚNICA fuente
+  }
+  // dataSource NO permitido
+}
+```
+
+**PHP generado:**
+```php
+render_hero_section('Bienvenido');  // Valores fijos
+```
+
+###### **2. Tipo `iterative` - dataSource domina**
+```json
+// page-templates.json
+{
+  "name": "course-card",
+  "props": {
+    "linkText": "Ver más"  // ← Solo para valores NO mapeados
+  },
+  "dataSource": {
+    "type": "post",
+    "mapping": {
+      "title": "post_title"  // ← PRIORIDAD TOTAL
+    }
+  }
+}
+```
+
+**PHP generado:**
+```php
+foreach ($posts as $post) {
+    render_course_card(
+        $post->post_title,    // ← dataSource (prioridad)
+        'Ver más'             // ← props (solo no-mapeados)
+    );
+}
+```
+
+###### **3. Tipo `aggregated` - Híbrido**
+```json
+// page-templates.json
+{
+  "name": "testimonials",
+  "props": {
+    "title": "Testimonios",      // ← Props para configuración
+    "subtitle": "Nuestros éxitos"
+  },
+  "dataSource": {
+    "type": "post",
+    "aggregation": {
+      "mode": "collect",       // ← dataSource para el array
+      "dataStructure": {
+        "name": "post_title"
+      }
+    }
+  }
+}
+```
+
+**PHP generado:**
+```php
+$testimonials = [/* array desde dataSource */];
+render_testimonials(
+    'Testimonios',        // ← props (configuración)
+    'Nuestros éxitos',    // ← props (configuración)
+    $testimonials         // ← dataSource (contenido)
+);
+```
+
+###### **4. Tipo `comprehensive` - Inteligente por campo**
+```json
+// page-templates.json
+{
+  "name": "test-showcase",
+  "props": {
+    "title": "Título por defecto",           // ← Fallback
+    "enableAnalytics": true                  // ← Valor cuando WP vacío
+  },
+  "dataSource": {
+    "wordpressData": {
+      "fields": {
+        "title": {"source": "post_title", "type": "native"}  // ← Prioridad
+      }
+    }
+  }
+}
+```
+
+**PHP generado:**
+```php
+render_test_showcase(
+    get_the_title() ?: 'Título por defecto',           // ← WordPress O fallback
+    get_post_meta(get_the_ID(), 'analytics', true) ?: true  // ← Meta O default
+);
+```
+
+##### **🎯 REGLAS MEMORABLES:**
+
+1. **`static`**: "Props únicos, no WordPress"
+2. **`iterative`**: "WordPress first, props backup"
+3. **`aggregated`**: "WordPress para contenido, props para estructura"
+4. **`comprehensive`**: "WordPress cuando existe, props cuando falta"
+
+##### **❌ ERROR COMÚN: Confundir los Niveles**
+
+```json
+// ❌ INCORRECTO: Poner wordpressData en page-templates.json
+{
+  "page-productos": {
+    "components": [{
+      "name": "product-card",
+      "wordpressData": { "fields": {...} }  // ← UBICACIÓN INCORRECTA
+    }]
+  }
+}
+
+// ❌ INCORRECTO: Poner dataSource en metadata.json
+{
+  "product-card": {
+    "dataSource": "post"  // ← UBICACIÓN INCORRECTA
+  }
+}
+```
+
+```json
+// ✅ CORRECTO: Cada configuración en su lugar
+// page-templates.json
+{
+  "page-productos": {
+    "components": [{
+      "name": "product-card",
+      "dataSource": "post"  // ← QUÉ datos usar
+    }]
+  }
+}
+
+// metadata.json
+{
+  "product-card": {
+    "wordpressData": {
+      "fields": {...}  // ← CÓMO mapear campos
+    }
+  }
+}
+```
+
 #### 3.1 Estructura General del Metadata
 
 El archivo `src/component-metadata.json` contiene cuatro secciones principales:

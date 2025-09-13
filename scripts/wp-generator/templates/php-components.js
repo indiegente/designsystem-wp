@@ -31,10 +31,8 @@ class PhpComponentTemplate {
 
 function ${functionName}(${propsParams}) {
     ?>
-    <div class="${componentName}">
-        ${this.generatePhpTemplate(componentName, props)}
-    </div>
-    
+    ${this.generatePhpTemplate(componentName, props)}
+
     <?php
 }
 

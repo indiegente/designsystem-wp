@@ -1,6 +1,5 @@
 {
   "page-carreras": {
-    "template": "carreras-layout",
     "file": "page-carreras.php",
     "title": "Carreras",
     "description": "Explora nuestras carreras técnicas y programas especializados",
@@ -62,10 +61,26 @@
             "post_status": "publish"
           },
           "mapping": {
-            "title": "post_title",
-            "description": "post_excerpt",
-            "image": "post_thumbnail_url",
-            "link": "post_permalink"
+            "title": {
+              "source": "post_title",
+              "type": "native"
+            },
+            "description": {
+              "source": "post_excerpt",
+              "type": "native"
+            },
+            "image": {
+              "source": "post_thumbnail_url",
+              "type": "native"
+            },
+            "link": {
+              "source": "post_permalink",
+              "type": "native"
+            },
+            "link_text": {
+              "source": "Ver carrera",
+              "type": "static"
+            }
           }
         }
       },
@@ -82,20 +97,43 @@
             "numberposts": 6,
             "post_status": "publish"
           },
-          "mapping": {
-            "name": "post_title",
-            "role": "post_excerpt",
-            "content": "post_content",
-            "rating": "meta_rating",
-            "avatar": "meta_avatar",
-            "course": "meta_course"
+          "aggregation": {
+            "mode": "collect",
+            "dataStructure": {
+              "name": {
+                "source": "post_title",
+                "type": "native"
+              },
+              "role": {
+                "source": "post_excerpt",
+                "type": "native"
+              },
+              "content": {
+                "source": "post_content",
+                "type": "native"
+              },
+              "rating": {
+                "source": "meta_rating",
+                "type": "native"
+              },
+              "avatar": {
+                "source": "meta_avatar",
+                "type": "acf"
+              },
+              "course": {
+                "source": "meta_course",
+                "type": "acf"
+              }
+            },
+            "defaultValues": {
+              "rating": 5
+            }
           }
         }
       }
     ]
   },
   "page-contacto": {
-    "template": "basic-page-layout",
     "file": "page-contacto.php",
     "title": "Contacto",
     "description": "Ponte en contacto con nosotros",
@@ -133,7 +171,6 @@
     ]
   },
   "page-test-showcase": {
-    "template": "showcase-layout",
     "file": "page-test-showcase.php",
     "title": "Test Showcase - Validación Completa",
     "description": "Página para probar todos los managers del sistema",
@@ -158,6 +195,40 @@
             "performance": {"lazyLoading": true, "preload": true}
           },
           "enableAnalytics": true
+        },
+        "dataSource": {
+          "type": "page",
+          "wordpressData": {
+            "fields": {
+              "title": {
+                "source": "post_title",
+                "type": "native"
+              },
+              "description": {
+                "source": "post_excerpt",
+                "type": "native"
+              },
+              "testImages": {
+                "source": "meta_test_images",
+                "type": "acf"
+              },
+              "testData": {
+                "source": "meta_test_data",
+                "type": "acf"
+              },
+              "enableAnalytics": {
+                "source": "meta_enable_analytics",
+                "type": "acf"
+              }
+            },
+            "defaultValues": {
+              "enableAnalytics": true,
+              "testImages": [
+                { "src": "https://via.placeholder.com/300x200/FF6B35/FFFFFF?text=Test+1", "alt": "Imagen de prueba 1" },
+                { "src": "https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Test+2", "alt": "Imagen de prueba 2" }
+              ]
+            }
+          }
         },
         "seo": {
           "title": "Test Showcase - Validación Completa | Toulouse Lautrec",

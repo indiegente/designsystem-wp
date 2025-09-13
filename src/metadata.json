@@ -36,29 +36,6 @@
       "show_in_rest": true
     }
   },
-  "templates": {
-    "carreras-layout": {
-      "name": "Carreras Layout",
-      "description": "Template para páginas de carreras educativas",
-      "components": ["hero-section", "course-card", "testimonials"],
-      "layout": "standard",
-      "category": "educational"
-    },
-    "showcase-layout": {
-      "name": "Test Showcase Layout",
-      "description": "Template para validación completa del sistema",
-      "components": ["test-showcase"],
-      "layout": "testing",
-      "category": "validation"
-    },
-    "basic-page-layout": {
-      "name": "Basic Page Layout",
-      "description": "Template básico para páginas estándar",
-      "components": ["hero-section"],
-      "layout": "minimal",
-      "category": "basic"
-    }
-  },
   "componentMapping": {
     "course-card": "carrera",
     "testimonials": "testimonio"
@@ -72,7 +49,6 @@
       { "name": "cta_text", "type": "string", "default": "" },
       { "name": "background_image", "type": "string", "default": "" }
     ],
-    "template": "hero-section",
     "performance": {
       "lazyLoading": false,
       "preloadImages": true
@@ -88,11 +64,6 @@
       { "name": "link", "type": "string", "default": "" },
       { "name": "link_text", "type": "string", "default": "Ver más" }
     ],
-    "template": "course-card",
-    "iteration": {
-      "mode": "individual",
-      "renderPerItem": true
-    },
     "performance": {
       "lazyLoading": true,
       "preloadImages": false
@@ -106,30 +77,6 @@
       { "name": "subtitle", "type": "string", "default": "" },
       { "name": "testimonials", "type": "array", "default": "[]" }
     ],
-    "template": "testimonials",
-    "aggregation": {
-      "mode": "collect",
-      "dataStructure": {
-        "name": "post_title",
-        "role": "post_excerpt", 
-        "content": "post_content",
-        "rating": {
-          "source": "meta_rating",
-          "type": "native"
-        },
-        "avatar": {
-          "source": "meta_avatar", 
-          "type": "acf"
-        },
-        "course": {
-          "source": "meta_course",
-          "type": "acf"
-        }
-      },
-      "defaultValues": {
-        "rating": 5
-      }
-    },
     "performance": {
       "lazyLoading": true,
       "preloadImages": false
@@ -142,22 +89,7 @@
       { "name": "title", "type": "string", "default": "" },
       { "name": "subtitle", "type": "string", "default": "" },
       { "name": "features", "type": "array", "default": "[]" }
-    ],
-    "template": "feature-grid",
-    "aggregation": {
-      "mode": "collect",
-      "dataStructure": {
-        "title": "post_title",
-        "description": "post_content",
-        "icon": {
-          "source": "meta_icon",
-          "type": "acf"
-        }
-      },
-      "defaultValues": {
-        "icon": "✨"
-      }
-    }
+    ]
   },
   "interactive-gallery": {
     "type": "comprehensive",
@@ -168,48 +100,7 @@
       { "name": "images", "type": "array", "default": "[]" },
       { "name": "autoPlay", "type": "boolean", "default": "true" },
       { "name": "showThumbnails", "type": "boolean", "default": "true" }
-    ],
-    "template": "interactive-gallery",
-    "wordpressData": {
-      "fields": {
-        "title": {
-          "source": "post_title",
-          "type": "native"
-        },
-        "subtitle": {
-          "source": "post_excerpt",
-          "type": "native"
-        },
-        "images": {
-          "source": "meta_gallery_images",
-          "type": "acf"
-        },
-        "autoPlay": {
-          "source": "meta_auto_play",
-          "type": "acf"
-        },
-        "showThumbnails": {
-          "source": "meta_show_thumbnails",
-          "type": "acf"
-        }
-      },
-      "defaultValues": {
-        "title": "Galería Interactiva",
-        "subtitle": "Explora nuestra colección",
-        "images": "[]",
-        "autoPlay": "true",
-        "showThumbnails": "true"
-      }
-    },
-    "interaction": {
-      "mode": "stateful",
-      "events": [
-        "image-changed",
-        "autoplay-toggled",
-        "lightbox-open"
-      ],
-      "stateManagement": true
-    }
+    ]
   },
   "test-showcase": {
     "type": "comprehensive",
@@ -221,50 +112,9 @@
       { "name": "testData", "type": "object", "default": "array()" },
       { "name": "enableAnalytics", "type": "boolean", "default": "true" }
     ],
-    "wordpressData": {
-      "fields": {
-        "title": {
-          "source": "post_title",
-          "type": "native"
-        },
-        "description": {
-          "source": "post_excerpt",
-          "type": "native"
-        },
-        "testImages": {
-          "source": "meta_test_images",
-          "type": "acf"
-        },
-        "testData": {
-          "source": "meta_test_data",
-          "type": "acf"
-        },
-        "enableAnalytics": {
-          "source": "meta_enable_analytics",
-          "type": "acf"
-        }
-      },
-      "defaultValues": {
-        "enableAnalytics": true,
-        "testImages": [
-          { "src": "https://via.placeholder.com/300x200/FF6B35/FFFFFF?text=Test+1", "alt": "Imagen de prueba 1" },
-          { "src": "https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Test+2", "alt": "Imagen de prueba 2" }
-        ]
-      }
-    },
     "performance": {
       "lazyLoading": true,
       "preloadImages": false
-    },
-    "analytics": {
-      "events": ["page_view", "component_view", "button_click", "image_interaction", "form_submit"],
-      "category": "test_showcase",
-      "trackingEnabled": true
-    },
-    "seo": {
-      "schema": "WebPage",
-      "structuredData": true,
-      "priority": "high"
     }
   }
 }
