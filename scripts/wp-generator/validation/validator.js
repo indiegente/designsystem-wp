@@ -28,7 +28,6 @@ class GenerationValidator {
       'assets/js',
       'assets/img',
       'components',
-      'templates',
       'inc'
     ];
 

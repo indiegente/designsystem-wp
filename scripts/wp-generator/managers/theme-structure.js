@@ -15,7 +15,6 @@ class ThemeStructure {
       'assets/js',
       'assets/img',
       'components',
-      'templates',
       'inc'
     ];
 

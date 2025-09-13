@@ -97,7 +97,7 @@ add_action('wp_head', function() {
                             </div>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <p>No hay testimonios disponibles.</p>
+                        <p><?php _e('No hay testimonios disponibles.', '${this.config.themeName || "theme"}'); ?></p>
                     <?php endif; ?>
                 </div>
             </div>
@@ -179,14 +179,14 @@ add_action('wp_head', function() {
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\(([^,)]+)(?:,\s*(\w+))?\)\s*=>\s*html`([\s\S]*?)`\)\}/g, 
       (match, arrayProp, itemVar, indexVar, itemTemplate) => {
         let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp, itemVar, indexVar);
-        return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as ${indexVar ? '$index => ' : ''}$item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p>No hay elementos disponibles.</p><?php endif; ?>`;
+        return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as ${indexVar ? '$index => ' : ''}$item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p><?php _e('No hay elementos disponibles.', '${this.config.themeName || "theme"}'); ?></p><?php endif; ?>`;
       });
     
     // Fallback para patrón simple sin paréntesis
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\w+ => html`([\s\S]*?)`\)\}/g, 
       (match, arrayProp, itemTemplate) => {
         let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp);
-        return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as $item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p>No hay elementos disponibles.</p><?php endif; ?>`;
+        return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as $item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p><?php _e('No hay elementos disponibles.', '${this.config.themeName || "theme"}'); ?></p><?php endif; ?>`;
       });
     
     // Manejar llamadas a métodos de la clase - convertir a PHP inline 

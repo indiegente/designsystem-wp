@@ -28,7 +28,6 @@ module.exports = {
     },
     wordpress: {
       components: 'components',
-      templates: 'templates',
       includes: 'inc'
     }
   },

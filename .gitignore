@@ -1,1 +1,35 @@
-node_modules
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+storybook-static/
+wordpress-output/
+
+# Debug files
+debug*
+
+# Backup and temporary files
+*_backup/
+*.tmp
+.DS_Store
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Composer
+vendor/
+composer.phar
+
+# WordPress specific - obsolete folders
+wp:validate/

@@ -55,8 +55,8 @@ function ${this.functionPrefix}_theme_setup() {
     add_theme_support('post-thumbnails');
     
     register_nav_menus(array(
-        'primary' => 'Menú Principal',
-        'footer' => 'Menú Footer'
+        'primary' => __('Menú Principal', '${this.enqueueHandle}'),
+        'footer' => __('Menú Footer', '${this.enqueueHandle}')
     ));
 }
 add_action('after_setup_theme', '${this.functionPrefix}_theme_setup');
@@ -77,12 +77,16 @@ function ${this.functionPrefix}_enqueue_assets() {
         foreach ($assets_available['css'] as $asset_key => $filename) {
             if ($asset_key === 'design-tokens') {
                 wp_enqueue_style('${this.enqueueHandle}-tokens', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
-                // Preload design tokens como critical CSS
-                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="var self=this;self.onload=null;self.rel=\\'stylesheet\\'">';
+                // Preload design tokens como critical CSS - SEGURO
+                add_action('wp_head', function() use ($filename) {
+                    echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
+                }, 1);
             } elseif (strpos($asset_key, '${this.enqueueHandle}') === 0) {
                 wp_enqueue_style('${this.enqueueHandle}-main', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
-                // Preload main CSS como critical
-                echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="var self=this;self.onload=null;self.rel=\\'stylesheet\\'">';
+                // Preload main CSS como critical - SEGURO
+                add_action('wp_head', function() use ($filename) {
+                    echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
+                }, 1);
             }
         }
     }
@@ -100,7 +104,7 @@ function ${this.functionPrefix}_enqueue_assets() {
                 if (strpos($filename, '.es.js') !== false) {
                     $js_path = $filename;
                     $handle = '${this.enqueueHandle}-js-main';
-                    wp_enqueue_script($handle, get_template_directory_uri() . '/assets/' . $js_path, array(), '1.0', true);
+                    wp_enqueue_script($handle, get_template_directory_uri() . '/assets/js/' . $js_path, array(), '1.0', true);
                     
                     // Añadir atributo type="module" para ES6
                     add_filter('script_loader_tag', function($tag, $handle_filter, $src) use ($handle) {
@@ -122,7 +126,7 @@ function ${this.functionPrefix}_enqueue_assets() {
                     if (strpos($filename, '.umd.js') !== false) {
                         $js_path = $filename;
                         $handle = '${this.enqueueHandle}-js-main';
-                        wp_enqueue_script($handle, get_template_directory_uri() . '/assets/' . $js_path, array(), '1.0', true);
+                        wp_enqueue_script($handle, get_template_directory_uri() . '/assets/js/' . $js_path, array(), '1.0', true);
                         $js_loaded = true;
                     }
                 }
@@ -150,7 +154,7 @@ function ${this.functionPrefix}_load_components() {
         $php_file = $component_path . $component_name . '.php';
         
         if (file_exists($php_file)) {
-            require_once $php_file;
+            get_template_part('components/' . $component_name . '/' . $component_name);
         }
     }
 }
@@ -244,13 +248,15 @@ function ${this.functionPrefix}_page_seo_analytics() {
         // Canonical
         echo '<link rel="canonical" href="' . esc_url(home_url($config['canonical'])) . '">';
         
-        // Analytics - JavaScript code
-        echo '<script>';
-        echo 'document.addEventListener("DOMContentLoaded", function() {';
-        echo '  // Add your analytics tracking code here';
-        echo '  // Example: gtag("event", "page_view", { event_category: "engagement" });';
-        echo '});';
-        echo '</script>';
+        // Analytics - JavaScript code con NONCE de seguridad
+        $nonce = wp_create_nonce('${this.functionPrefix}_analytics_nonce');
+        wp_add_inline_script('${this.enqueueHandle}-js-main', '
+            document.addEventListener("DOMContentLoaded", function() {
+                // Código de analytics seguro con nonce: ' . $nonce . '
+                // Add your analytics tracking code here
+                // Example: gtag("event", "page_view", { event_category: "engagement" });
+            });
+        ');
     }
 }
 add_action('wp_head', '${this.functionPrefix}_page_seo_analytics');

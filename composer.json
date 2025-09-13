@@ -1,0 +1,21 @@
+{
+    "name": "toulouse/design-system",
+    "description": "Toulouse Design System WordPress Generator",
+    "type": "project",
+    "license": "MIT",
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^3.7",
+        "wp-coding-standards/wpcs": "^3.0",
+        "phpcompatibility/php-compatibility": "^9.3"
+    },
+    "scripts": {
+        "lint": "phpcs --standard=WordPress wordpress-output/",
+        "lint:fix": "phpcbf --standard=WordPress wordpress-output/",
+        "setup": "phpcs --config-set installed_paths vendor/wp-coding-standards/wpcs,vendor/phpcompatibility/php-compatibility"
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    }
+}
