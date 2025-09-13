@@ -17,8 +17,8 @@
         "props": {
           "title": "Nuestras Carreras",
           "subtitle": "Descubre tu potencial creativo con nuestras carreras técnicas",
-          "ctaText": "Explorar carreras",
-          "backgroundImage": ""
+          "cta_text": "Explorar carreras",
+          "background_image": ""
         },
         "seo": {
           "title": "Carreras Técnicas | Toulouse Lautrec",
@@ -52,7 +52,7 @@
           "description": "",
           "image": "",
           "link": "",
-          "linkText": "Ver carrera"
+          "link_text": "Ver carrera"
         },
         "dataSource": {
           "type": "wordpress_posts",
@@ -108,8 +108,8 @@
         "props": {
           "title": "Contáctanos",
           "subtitle": "Estamos aquí para ayudarte en tu camino creativo",
-          "ctaText": "Enviar mensaje",
-          "backgroundImage": ""
+          "cta_text": "Enviar mensaje",
+          "background_image": ""
         },
         "seo": {
           "title": "Contacto | Toulouse Lautrec",

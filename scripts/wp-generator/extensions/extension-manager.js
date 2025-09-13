@@ -11,7 +11,6 @@ const path = require('path');
 class ExtensionManager {
   constructor(config) {
     this.config = config;
-    this.extensions = this.loadExtensions();
     this.hooks = {
       beforeComponentRender: [],
       afterComponentRender: [],
@@ -23,6 +22,7 @@ class ExtensionManager {
       customTemplates: new Map(),
       customHooks: new Map()
     };
+    this.extensions = this.loadExtensions();
   }
 
   /**

@@ -140,17 +140,21 @@ class WordPressGenerator {
         
         let qualityValidationsPassed = true;
         
-        try {
-          // 9. Ejecutar PHPCS auto-fix para WordPress Coding Standards
-          console.log('🔧 Aplicando WordPress Coding Standards (PHPCS)...');
-          const phpcsSuccess = await this.runPHPCSAutoFix();
-          
-          if (!phpcsSuccess) {
+        // 9. Ejecutar PHPCS auto-fix para WordPress Coding Standards (opcional)
+        if (!process.env.SKIP_PHPCS) {
+          try {
+            console.log('🔧 Aplicando WordPress Coding Standards (PHPCS)...');
+            const phpcsSuccess = await this.runPHPCSAutoFix();
+            
+            if (!phpcsSuccess) {
+              qualityValidationsPassed = false;
+            }
+          } catch (error) {
+            console.error('❌ PHPCS FALLÓ:', error.message);
             qualityValidationsPassed = false;
           }
-        } catch (error) {
-          console.error('❌ PHPCS FALLÓ:', error.message);
-          qualityValidationsPassed = false;
+        } else {
+          console.log('⏭️ PHPCS saltado (SKIP_PHPCS=true)');
         }
         
         try {
@@ -163,6 +167,19 @@ class WordPressGenerator {
           }
         } catch (error) {
           console.error('❌ VALIDACIÓN HÍBRIDA FALLÓ:', error.message);
+          qualityValidationsPassed = false;
+        }
+        
+        try {
+          // 11. Ejecutar validación de renderizado de componentes
+          console.log('🧩 Ejecutando validación de renderizado de componentes...');
+          const renderValidationSuccess = await this.runComponentRenderValidation();
+          
+          if (!renderValidationSuccess) {
+            qualityValidationsPassed = false;
+          }
+        } catch (error) {
+          console.error('❌ VALIDACIÓN DE RENDERIZADO FALLÓ:', error.message);
           qualityValidationsPassed = false;
         }
         
@@ -321,6 +338,12 @@ class WordPressGenerator {
       
       throw new Error(`❌ VALIDACIÓN HÍBRIDA FALLÓ: ${error.message}`);
     }
+  }
+
+  async runComponentRenderValidation() {
+    const ComponentRenderValidator = require('../validation/component-render-validator');
+    const renderValidator = new ComponentRenderValidator(this.config);
+    return await renderValidator.validateComponentRendering();
   }
 
   /**

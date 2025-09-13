@@ -11,22 +11,37 @@
 - ✅ **Fail-fast approach** - Sin fallbacks silenciosos, rollback automático completo
 - ✅ **WordPress Best Practices** - PHPCS integrado con WordPress Coding Standards
 - ✅ **Calidad garantizada** - Solo genera código que pasa todas las validaciones
+- ✅ **Validación de renderizado** - Verifica consistencia entre metadata.json y page-templates.json
+- ✅ **Sistema de extensiones** - Hooks personalizables para analytics y funcionalidades avanzadas
 
 ## 📋 Comandos Principales
 
+### 🚀 **Generación de Tema**
 ```bash
-# 🚀 Comando principal - Full workflow con calidad profesional
-npm run wp:generate     # Genera tema + aplica PHPCS + valida todo
+npm run wp:generate           # Generación completa con PHPCS y validaciones
+npm run wp:generate:debug     # Generación con logs detallados (DEBUG_MODE=true)
+npm run wp:generate:fast      # Generación rápida sin PHPCS (SKIP_PHPCS=true)
+```
 
-# 🔧 Setup inicial para nuevos desarrolladores
-npm install             # Instala dependencias (incluye Lighthouse)
-npm run setup           # Instala Composer + PHPCS WordPress Standards
+### 🔧 **Setup Inicial**
+```bash
+npm install                   # Instala dependencias (incluye Lighthouse)
+npm run setup                 # Instala Composer + PHPCS WordPress Standards
+```
 
-# 🧪 Validaciones específicas
-npm run wp:validate     # Validación híbrida completa
-npm run wp:test-urls    # Test de URLs en WordPress vivo
-npm run wp:lint         # Solo PHPCS
-npm run wp:lint:fix     # Solo auto-fix PHPCS
+### 🧪 **Validaciones**
+```bash
+npm run wp:validate           # Validación híbrida (managers + herramientas profesionales)
+npm run wp:validate:render    # Validación de renderizado de componentes
+npm run wp:test-urls          # Test de URLs en WordPress vivo
+```
+
+### 🔧 **WordPress Coding Standards**
+```bash
+npm run phpcs                 # Verificar WordPress Coding Standards
+npm run phpcs:fix             # Corregir automáticamente con PHPCBF
+npm run wp:lint               # Alias para phpcs
+npm run wp:lint:fix           # Alias para phpcs:fix
 ```
 
 ## 🏗️ Arquitectura Modernizada
@@ -45,14 +60,22 @@ toulouse-design-system/
 │   │   └── test-showcase/
 │   ├── tokens/
 │   │   └── design-tokens.css # Variables CSS centralizadas
-│   ├── metadata.json        # Metadata de componentes
-│   ├── page-templates.json  # Configuración de páginas
+│   ├── extensions/         # 🧩 Sistema de extensiones
+│   │   ├── test-extension.js           # Extensión de prueba/validación
+│   │   ├── conditional-logic-example.js
+│   │   └── events-and-interactions-example.js
+│   ├── metadata.json        # Metadata de componentes + tipos
+│   ├── page-templates.json  # Configuración de páginas + props
 │   └── index.js            # Entry point
 ├── scripts/
 │   ├── config/
 │   │   └── generate-wp-templates.js    # Entry point principal
-│   ├── validation/
-│   │   └── hybrid-validator.js         # Validador híbrido profesional
+│   ├── validation/          # 🔍 Sistema de validación multinivel
+│   │   ├── hybrid-validator.js         # Validador híbrido profesional
+│   │   ├── component-render-validator.js # Validación renderizado componentes
+│   │   ├── component-render-validator-cli.js # CLI standalone
+│   │   ├── manager-validator.js        # Validación de managers
+│   │   └── wordpress-url-tester.js     # Test URLs WordPress vivo
 │   └── wp-generator/        # Sistema de generación WordPress
 │       ├── core/            # Configuración central
 │       │   ├── config.js               # Config dinámico con fail-fast
@@ -61,7 +84,7 @@ toulouse-design-system/
 │       │   ├── asset-manager.js        # Assets optimizados (Vite)
 │       │   ├── analytics-manager.js    # GA4 + eventos separado
 │       │   ├── seo-manager.js          # SEO dinámico puro
-│       │   ├── component-generator.js  # Lit → PHP
+│       │   ├── component-generator.js  # Lit → PHP + extensiones
 │       │   ├── template-builder.js     # Templates WordPress
 │       │   └── theme-structure.js      # Estructura del tema
 │       ├── templates/       # Generadores de código
@@ -72,8 +95,8 @@ toulouse-design-system/
 │       │   ├── validator.js            # Validador básico
 │       │   ├── validation-manager.js   # Validaciones avanzadas
 │       │   └── php-validator.js        # Validación PHP tiempo real
-│       └── extensions/      # Sistema de extensiones
-│           ├── extension-manager.js    # Gestor de extensiones
+│       └── extensions/      # 🧩 Sistema de extensiones
+│           ├── extension-manager.js    # Gestor de extensiones + hooks
 │           └── analytics/              # Extensiones Analytics
 │               ├── ga4-data-layer.js
 │               ├── facebook-pixel.js
