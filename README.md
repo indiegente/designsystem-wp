@@ -96,7 +96,7 @@ toulouse-design-system/
 │       ├── managers/        # Gestores especializados
 │       │   ├── asset-manager.js        # Assets optimizados (Vite)
 │       │   ├── analytics-manager.js    # GA4 + eventos separado
-│       │   ├── seo-manager.js          # SEO dinámico puro
+│       │   ├── seo-editable-manager.js  # SEO dinámico + ACF editable
 │       │   ├── component-generator.js  # Lit → PHP + extensiones
 │       │   ├── template-builder.js     # Templates WordPress
 │       │   └── theme-structure.js      # Estructura del tema

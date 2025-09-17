@@ -157,9 +157,9 @@ class ManagerValidator {
   validateSEOManager(html, urlConfig) {
     const issues = [];
     
-    // Check if OUR SEO manager is working
-    if (!html.includes('toulouse') && !html.includes('seo-manager')) {
-      issues.push('⚠️ Toulouse SEO Manager no detectado');
+    // Check if OUR integrated SEO system is working
+    if (!html.includes('toulouse') && !html.includes('ToulouseSEOManager')) {
+      issues.push('⚠️ Toulouse SEO Manager integrado no detectado');
     }
     
     // Check for structured data from OUR system

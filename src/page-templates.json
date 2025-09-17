@@ -3,6 +3,13 @@
     "file": "page-carreras.php",
     "title": "Carreras",
     "description": "Explora nuestras carreras técnicas y programas especializados",
+    "seo": {
+      "title": "Carreras Técnicas | Toulouse Lautrec",
+      "description": "Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.",
+      "keywords": "carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec",
+      "ogImage": "",
+      "canonical": "/carreras"
+    },
     "components": [
       {
         "name": "hero-section",
@@ -11,13 +18,6 @@
           "subtitle": "Descubre tu potencial creativo con nuestras carreras técnicas",
           "ctaText": "Explorar carreras",
           "backgroundImage": ""
-        },
-        "seo": {
-          "title": "Carreras Técnicas | Toulouse Lautrec",
-          "description": "Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.",
-          "keywords": "carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec",
-          "ogImage": "",
-          "canonical": "/carreras"
         },
         "analytics": {
           "pageView": "page_view_carreras",
@@ -124,6 +124,13 @@
     "file": "page-contacto.php",
     "title": "Contacto",
     "description": "Ponte en contacto con nosotros",
+    "seo": {
+      "title": "Contacto | Toulouse Lautrec",
+      "description": "Ponte en contacto con nosotros. Estamos aquí para ayudarte en tu camino creativo.",
+      "keywords": "contacto, Toulouse Lautrec, información, ayuda",
+      "ogImage": "",
+      "canonical": "/contacto"
+    },
     "components": [
       {
         "name": "hero-section",
@@ -132,13 +139,6 @@
           "subtitle": "Estamos aquí para ayudarte en tu camino creativo",
           "ctaText": "Enviar mensaje",
           "backgroundImage": ""
-        },
-        "seo": {
-          "title": "Contacto | Toulouse Lautrec",
-          "description": "Ponte en contacto con nosotros. Estamos aquí para ayudarte en tu camino creativo.",
-          "keywords": "contacto, Toulouse Lautrec, información, ayuda",
-          "ogImage": "",
-          "canonical": "/contacto"
         },
         "analytics": {
           "pageView": "page_view_contacto",
@@ -158,6 +158,12 @@
     "file": "page-test-showcase.php",
     "title": "Test Showcase - Validación Completa",
     "description": "Página para probar todos los managers del sistema",
+    "seo": {
+      "title": "Test Showcase - Validación Completa | Toulouse Lautrec",
+      "description": "Página de prueba para validar todos los managers del sistema de generación WordPress",
+      "keywords": "test, showcase, managers, wordpress, validation",
+      "canonical": "/test-showcase"
+    },
     "components": [
       {
         "name": "test-showcase",
@@ -176,12 +182,6 @@
             "performance": {"lazyLoading": true, "preload": true}
           },
           "enableAnalytics": true
-        },
-        "seo": {
-          "title": "Test Showcase - Validación Completa | Toulouse Lautrec",
-          "description": "Página de prueba para validar todos los managers del sistema de generación WordPress",
-          "keywords": "test, showcase, managers, wordpress, validation",
-          "canonical": "/test-showcase"
         },
         "analytics": {
           "pageView": "page_view_test_showcase",

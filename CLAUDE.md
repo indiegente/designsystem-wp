@@ -40,7 +40,7 @@ npm run wp:generate  # Todo incluido: generación + PHPCS + validación híbrida
 ```
 scripts/wp-generator/
 ├── core/               # config.js (con fail-fast), config-manager.js
-├── managers/           # analytics-manager.js, seo-manager.js, asset-manager.js (modernizado)
+├── managers/           # analytics-manager.js, seo-editable-manager.js, asset-manager.js (modernizado)
 ├── validation/         # validator.js, validation-manager.js, php-validator.js
 ├── templates/          # php-components.js, functions-template.js, dynamic-page-templates.js
 ├── extensions/         # Sistema de extensiones
@@ -130,8 +130,14 @@ if (allValidationsPass) {
 1. **`.rules`** - Reglas críticas del proyecto
 2. **`scripts/wp-generator/core/config.js`** - Configuración central
 3. **`src/metadata.json`** - Metadata de componentes (fieldTypes)
-4. **`src/page-templates.json`** - Configuración de datos (dataSources)
+4. **`src/page-templates.json`** - Configuración SEO page-level y datos (dataSources)
 5. **`package.json`** - Scripts y dependencias actualizadas
+
+### Arquitectura SEO Integrada (Nueva)
+- **SEO page-level**: Configuración SEO movida de component-level a page-level en `page-templates.json`
+- **SEO Editable Manager**: Sistema unificado que combina gestión de metadatos y campos ACF
+- **Configuración declarativa**: Eliminación de hooks complejos en favor de metadata simple
+- **Capacidad de edición total**: SEO Manager puede editar títulos, descripciones, H1-H3 y contenido textual via ACF
 
 ### WordPress Best Practices Aplicadas
 - ✅ **Escapado obligatorio**: `esc_html()`, `esc_url()`, `esc_attr()`

@@ -23,21 +23,26 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 - **Métodos JavaScript** se convierten a PHP inline apropiadamente
 - **Template strings** de Lit se convierten completamente a PHP válido
 
-### 🆕 SEO Dinámico Completo
+### 🆕 SEO Dinámico Integrado
 
 #### Added
-- **SEO Manager** completamente automático con detección inteligente de templates
-- **Meta tags específicos por página** usando configuración desde `seo-config.json`
+- **SEO Editable Manager** integrado con configuración declarativa desde `page-templates.json`
+- **Meta tags específicos por página** usando ACF fields configurados automáticamente
 - **JSON-LD estructurado automático** con Schema.org (Organization, Course, Review)
-- **Detección robusta de template** usando `global $template` con múltiples fallbacks
+- **Sistema de edición completa** para SEO Manager con títulos, descripciones y contenido textual
 - **Meta tags OpenGraph y Twitter Cards** completamente configurados
 - **Canonical URLs y robots meta** automáticos por página
 
+#### Changed
+- **Arquitectura SEO refactorizada** de component-level a page-level para mejor flexibilidad
+- **Configuración declarativa** eliminando hooks complejos en favor de metadata simple
+- **Integración completa** del SEO manager en `seo-editable-manager.js` eliminando archivos duplicados
+
 #### Fixed
-- **SEO Manager detección de templates** ahora usa `getCurrentTemplateSlug()` correctamente
+- **SEO Manager detección de templates** ahora usa configuración page-level
 - **Meta tags específicos por template** se cargan sin errores
 - **JSON-LD estructurado** se genera apropiadamente para cada tipo de página
-- **Template slug detection** funciona con Template Name y file-based templates
+- **ACF fields generation** automática para campos SEO editables
 
 ### 🛠️ Configuración Client-Agnostic
 

@@ -190,11 +190,8 @@ function ${this.functionPrefix}_load_advanced_modules() {
         require_once $validation_file;
     }
     
-    // Cargar sistema SEO dinámico
-    $seo_file = get_template_directory() . '/inc/seo-manager.php';
-    if (file_exists($seo_file)) {
-        require_once $seo_file;
-    }
+    // Cargar sistema SEO integrado con ACF editable (ya incluido en seo-editable-fields.php)
+    // El SEO manager ahora está integrado en el sistema de campos editables
     
     // Cargar sistema Analytics separado
     $analytics_file = get_template_directory() . '/inc/analytics-manager.php';
@@ -206,6 +203,12 @@ function ${this.functionPrefix}_load_advanced_modules() {
     $acf_file = get_template_directory() . '/inc/acf-fields.php';
     if (file_exists($acf_file)) {
         require_once $acf_file;
+    }
+
+    // Cargar campos SEO editables para el equipo SEO
+    $seo_editable_file = get_template_directory() . '/inc/seo-editable-fields.php';
+    if (file_exists($seo_editable_file)) {
+        require_once $seo_editable_file;
     }
 
     // Cargar sistema de assets optimizados - DESHABILITADO para evitar duplicados

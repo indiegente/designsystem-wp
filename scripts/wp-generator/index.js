@@ -5,9 +5,9 @@ const TemplateBuilder = require('./managers/template-builder');
 const AssetManager = require('./managers/asset-manager');
 const ThemeStructure = require('./managers/theme-structure');
 const GenerationValidator = require('./validation/validator');
-const SEOManager = require('./managers/seo-manager');
 const AnalyticsManager = require('./managers/analytics-manager');
 const ACFManager = require('./managers/acf-manager');
+const SEOEditableManager = require('./managers/seo-editable-manager');
 const ValidationManager = require('./validation/validation-manager');
 const PHPValidator = require('./validation/php-validator');
 const ConfigManager = require('./core/config-manager');
@@ -41,8 +41,8 @@ class WordPressGenerator {
     this.templateBuilder = new TemplateBuilder(this.config);
     this.assetManager = new AssetManager(this.config);
     this.validator = new GenerationValidator(this.config);
-    this.seoManager = new SEOManager(this.config);
     this.acfManager = new ACFManager(this.config);
+    this.seoEditableManager = new SEOEditableManager(this.config);
     this.validationManager = new ValidationManager(this.config);
     this.phpValidator = new PHPValidator(this.config);
   }
@@ -105,8 +105,7 @@ class WordPressGenerator {
       // 4. Crear plantillas WordPress (puede fallar en validación)
       await this.templateBuilder.generateAll();
       
-      // 5. Generar sistema SEO dinámico
-      this.seoManager.generate();
+      // 5. SEO dinámico ahora se integra con campos editables (se genera en step 7)
       
       // 6. Generar sistema de Analytics (GA4, eventos, data layer)
       const dynamicConfig = this.configManager.getConfig();
@@ -125,7 +124,18 @@ class WordPressGenerator {
         console.log('⚠️ ACF: Sin campos ACF para generar');
       }
 
-      // 8. Ejecutar validación y generar fallbacks
+      // 8. Generar campos SEO editables para el equipo SEO
+      console.log('🎯 Generando campos SEO editables...');
+      try {
+        const seoEditableStats = await this.seoEditableManager.generate();
+        if (seoEditableStats.success) {
+          console.log(`✅ SEO Editable: ${seoEditableStats.editablePages} páginas con campos editables`);
+        }
+      } catch (error) {
+        console.log('⚠️ SEO Editable: Error generando campos editables:', error.message);
+      }
+
+      // 9. Ejecutar validación y generar fallbacks
       const isValid = this.validationManager.validateGeneration();
       
       // 7. Validar generación final
