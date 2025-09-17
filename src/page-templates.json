@@ -3,21 +3,14 @@
     "file": "page-carreras.php",
     "title": "Carreras",
     "description": "Explora nuestras carreras técnicas y programas especializados",
-    "wordpressData": {
-      "postType": "carrera",
-      "query": {
-        "numberposts": -1,
-        "post_status": "publish"
-      }
-    },
     "components": [
       {
         "name": "hero-section",
         "props": {
           "title": "Nuestras Carreras",
           "subtitle": "Descubre tu potencial creativo con nuestras carreras técnicas",
-          "cta_text": "Explorar carreras",
-          "background_image": ""
+          "ctaText": "Explorar carreras",
+          "backgroundImage": ""
         },
         "seo": {
           "title": "Carreras Técnicas | Toulouse Lautrec",
@@ -51,7 +44,7 @@
           "description": "",
           "image": "",
           "link": "",
-          "link_text": "Ver carrera"
+          "linkText": "Ver carrera"
         },
         "dataSource": {
           "type": "post",
@@ -77,7 +70,7 @@
               "source": "post_permalink",
               "type": "native"
             },
-            "link_text": {
+            "linkText": {
               "source": "Ver carrera",
               "type": "static"
             }
@@ -97,36 +90,30 @@
             "numberposts": 6,
             "post_status": "publish"
           },
-          "aggregation": {
-            "mode": "collect",
-            "dataStructure": {
-              "name": {
-                "source": "post_title",
-                "type": "native"
-              },
-              "role": {
-                "source": "post_excerpt",
-                "type": "native"
-              },
-              "content": {
-                "source": "post_content",
-                "type": "native"
-              },
-              "rating": {
-                "source": "meta_rating",
-                "type": "native"
-              },
-              "avatar": {
-                "source": "meta_avatar",
-                "type": "acf"
-              },
-              "course": {
-                "source": "meta_course",
-                "type": "acf"
-              }
+          "mapping": {
+            "name": {
+              "source": "post_title",
+              "type": "native"
             },
-            "defaultValues": {
-              "rating": 5
+            "role": {
+              "source": "meta_role",
+              "type": "acf"
+            },
+            "content": {
+              "source": "post_content",
+              "type": "native"
+            },
+            "rating": {
+              "source": "meta_rating",
+              "type": "acf"
+            },
+            "user_photo": {
+              "source": "meta_user_photo",
+              "type": "acf"
+            },
+            "course": {
+              "source": "meta_course",
+              "type": "acf"
             }
           }
         }
@@ -137,17 +124,14 @@
     "file": "page-contacto.php",
     "title": "Contacto",
     "description": "Ponte en contacto con nosotros",
-    "wordpressData": {
-      "postType": "page"
-    },
     "components": [
       {
         "name": "hero-section",
         "props": {
           "title": "Contáctanos",
           "subtitle": "Estamos aquí para ayudarte en tu camino creativo",
-          "cta_text": "Enviar mensaje",
-          "background_image": ""
+          "ctaText": "Enviar mensaje",
+          "backgroundImage": ""
         },
         "seo": {
           "title": "Contacto | Toulouse Lautrec",
@@ -174,9 +158,6 @@
     "file": "page-test-showcase.php",
     "title": "Test Showcase - Validación Completa",
     "description": "Página para probar todos los managers del sistema",
-    "wordpressData": {
-      "postType": "page"
-    },
     "components": [
       {
         "name": "test-showcase",
@@ -195,40 +176,6 @@
             "performance": {"lazyLoading": true, "preload": true}
           },
           "enableAnalytics": true
-        },
-        "dataSource": {
-          "type": "page",
-          "wordpressData": {
-            "fields": {
-              "title": {
-                "source": "post_title",
-                "type": "native"
-              },
-              "description": {
-                "source": "post_excerpt",
-                "type": "native"
-              },
-              "testImages": {
-                "source": "meta_test_images",
-                "type": "acf"
-              },
-              "testData": {
-                "source": "meta_test_data",
-                "type": "acf"
-              },
-              "enableAnalytics": {
-                "source": "meta_enable_analytics",
-                "type": "acf"
-              }
-            },
-            "defaultValues": {
-              "enableAnalytics": true,
-              "testImages": [
-                { "src": "https://via.placeholder.com/300x200/FF6B35/FFFFFF?text=Test+1", "alt": "Imagen de prueba 1" },
-                { "src": "https://via.placeholder.com/300x200/F7931E/FFFFFF?text=Test+2", "alt": "Imagen de prueba 2" }
-              ]
-            }
-          }
         },
         "seo": {
           "title": "Test Showcase - Validación Completa | Toulouse Lautrec",

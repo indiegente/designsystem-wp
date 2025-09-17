@@ -28,15 +28,48 @@ class ComponentGenerator {
     }
   }
 
+  extractFieldTypesFromMetadata(componentName) {
+    const componentMetadata = this.metadata[componentName];
+    if (!componentMetadata) return {};
+
+    const fieldTypes = {};
+
+    // Para componentes aggregated, extraer fieldTypes de arrayFields
+    if (componentMetadata.arrayFields) {
+      Object.entries(componentMetadata.arrayFields).forEach(([arrayName, fields]) => {
+        fields.forEach(field => {
+          if (field.fieldType) {
+            fieldTypes[field.name] = field.fieldType;
+          }
+        });
+      });
+    }
+
+    // Para componentes simples, extraer de parameters directamente
+    if (componentMetadata.parameters) {
+      componentMetadata.parameters.forEach(param => {
+        if (param.fieldType) {
+          fieldTypes[param.name] = param.fieldType;
+        }
+      });
+    }
+
+    return fieldTypes;
+  }
+
   async generateComponentCode(component, dataSource) {
     const componentName = component.name;
     const metadata = this.metadata[componentName];
-    
+
+    // Extraer fieldTypes del metadata.json para este componente
+    const fieldTypes = this.extractFieldTypesFromMetadata(componentName);
+
     // Contexto para extensiones
     const context = {
       component,
       metadata,
       dataSource,
+      fieldTypes,
       config: this.config
     };
 
@@ -64,7 +97,8 @@ class ComponentGenerator {
           result = this.generateAggregatedComponent(component, metadata, dataSource);
           break;
         case 'comprehensive':
-          result = this.generateComprehensiveComponent(component, metadata, dataSource);
+          // DEPRECATED: comprehensive ahora se maneja como aggregated
+          result = this.generateAggregatedComponent(component, metadata, dataSource);
           break;
         default:
           throw new Error(`❌ Tipo de componente '${metadata.type}' no soportado. NO usar fallbacks.`);
@@ -182,31 +216,44 @@ class ComponentGenerator {
   generateAggregatedComponent(component, metadata, dataSource) {
     const query = dataSource?.query || {};
     const queryString = this.buildQueryString(query, component.name);
-    // FUENTE ÚNICA DE VERDAD: Usar aggregation de dataSource (page-templates.json)
-    const aggregation = dataSource?.aggregation || metadata.aggregation;
-    
-    const dataStructure = aggregation.dataStructure;
-    const defaultValues = aggregation.defaultValues || {};
-    
-    const dataMapping = Object.entries(dataStructure).map(([key, value]) => {
+    // FUENTE ÚNICA DE VERDAD: Usar mapping de dataSource (page-templates.json)
+    const mapping = dataSource?.mapping || {};
+
+    // Extraer fieldTypes del metadata.json
+    const fieldTypes = this.extractFieldTypesFromMetadata(component.name);
+
+    const dataMapping = Object.entries(mapping).map(([key, value]) => {
       let mapping = '';
       
       // Manejar nueva estructura con type specification
       if (typeof value === 'object' && value.source && value.type) {
         const source = value.source;
         const fieldType = value.type;
-        const defaultValue = defaultValues[key] || '';
+        const defaultValue = '';
         
-        if (source === 'post_title') mapping = 'get_the_title()';
-        else if (source === 'post_excerpt') mapping = 'get_the_excerpt()';
-        else if (source === 'post_content') mapping = 'get_the_content()';
+        if (source === 'post_title') mapping = 'get_the_title($item)';
+        else if (source === 'post_excerpt') mapping = 'get_the_excerpt($item)';
+        else if (source === 'post_content') mapping = 'get_the_content(null, false, $item)';
         else if (source.startsWith('meta_')) {
           const metaKey = source.replace('meta_', '');
           
           if (fieldType === 'acf') {
-            mapping = `get_field('${metaKey}') ?: '${defaultValue}'`;
+            // Usar fieldType del metadata.json para detección de tipo de campo
+            const metadataFieldType = fieldTypes[key];
+
+            if (metadataFieldType === 'image') {
+              mapping = `(function() use ($item) {
+                $field = get_field('${metaKey}', $item->ID);
+                if (is_array($field) && isset($field['url'])) return $field['url'];
+                if (is_numeric($field) && !empty($field)) return wp_get_attachment_image_url((int) $field, 'full') ?: '';
+                if (is_string($field) && !empty($field)) return $field;
+                return '${defaultValue}';
+              })()`;
+            } else {
+              mapping = `get_field('${metaKey}', $item->ID) ?: '${defaultValue}'`;
+            }
           } else {
-            mapping = `get_post_meta(get_the_ID(), '${metaKey}', true) ?: '${defaultValue}'`;
+            mapping = `get_post_meta($item->ID, '${metaKey}', true) ?: '${defaultValue}'`;
           }
         }
         else mapping = `'${source}'`;
@@ -228,9 +275,15 @@ class ComponentGenerator {
 🚨 SIN BACKWARD COMPATIBILITY: Solo arquitectura unificada soportada`);
       }
       
-      return `'${key}' => ${mapping}`;
+      // CORREGIDO: Para campos ACF usar el nombre del campo real, no la clave del mapeo
+      const fieldName = (typeof value === 'object' && value.source && value.source.startsWith('meta_'))
+        ? value.source.replace('meta_', '')
+        : key;
+
+      return `'${fieldName}' => ${mapping}`;
     }).join(',\n          ');
     
+
     const props = component.props || {};
     const staticParams = metadata.parameters
       .filter(param => param.type !== 'array')
@@ -243,25 +296,23 @@ class ComponentGenerator {
     
     if (!empty($items)) {
       foreach ($items as $item) {
-        setup_postdata($item);
         $${component.name}_data[] = array(
           ${dataMapping}
         );
       }
-      wp_reset_postdata();
     }
-    
+
     ${metadata.phpFunction}(${staticParams}, $${component.name}_data);
     ?>`;
   }
 
   generateComprehensiveComponent(component, metadata, dataSource) {
-    // FUENTE ÚNICA DE VERDAD: Usar wordpressData de dataSource (page-templates.json)
-    const wordpressData = dataSource?.wordpressData || metadata.wordpressData;
-
-    if (!wordpressData || !wordpressData.fields) {
-      throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} requiere configuración wordpressData.fields en page-templates.json`);
+    // FUENTE ÚNICA DE VERDAD: Usar fields de dataSource (page-templates.json)
+    if (!dataSource || !dataSource.fields) {
+      throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} requiere configuración dataSource.fields en page-templates.json`);
     }
+
+    const wordpressData = dataSource;
 
     // Generar código PHP dinámico usando wordpressData
     const paramValues = metadata.parameters.map(param => {
@@ -293,7 +344,9 @@ class ComponentGenerator {
             phpCode = `get_post_meta(get_the_ID(), '${field.source}', true)`;
         }
       } else if (field.type === 'acf') {
-        phpCode = `get_field('${field.source}')`;
+        // Para campos ACF, usar el nombre sin el prefijo "meta_"
+        const acfFieldName = field.source.replace('meta_', '');
+        phpCode = `get_field('${acfFieldName}')`;
       } else {
         throw new Error(`❌ COMPREHENSIVE COMPONENT ERROR: ${component.name} - tipo de field '${field.type}' no soportado. Use 'native' o 'acf'`);
       }
@@ -416,11 +469,11 @@ class ComponentGenerator {
     console.log(`✅ Convertido: ${componentName}`);
   }
 
-  litToPhp(componentName, litContent) {
+  litToPhp(componentName, litContent, fieldTypes = {}) {
     const props = this.extractPropsFromLit(litContent);
     const cssClasses = this.extractCssClasses(litContent);
-    
-    return this.phpTemplate.generate(componentName, props, cssClasses);
+
+    return this.phpTemplate.generate(componentName, props, cssClasses, fieldTypes);
   }
 
   extractPropsFromLit(litContent) {

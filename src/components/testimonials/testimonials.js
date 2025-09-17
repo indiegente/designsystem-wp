@@ -157,9 +157,9 @@ export class Testimonials extends LitElement {
                 </div>
                 <p class="testimonial-content">"${testimonial.content}"</p>
                 <div class="testimonial-author">
-                  ${testimonial.avatar ? html`
-                    <img 
-                      src="${testimonial.avatar}" 
+                  ${testimonial.user_photo ? html`
+                    <img
+                      src="${testimonial.user_photo}"
                       alt="${testimonial.name}"
                       class="author-avatar"
                     />

@@ -46,8 +46,8 @@
     "parameters": [
       { "name": "title", "type": "string", "default": "" },
       { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "cta_text", "type": "string", "default": "" },
-      { "name": "background_image", "type": "string", "default": "" }
+      { "name": "ctaText", "type": "string", "default": "" },
+      { "name": "backgroundImage", "type": "string", "default": "" }
     ],
     "performance": {
       "lazyLoading": false,
@@ -62,7 +62,7 @@
       { "name": "description", "type": "string", "default": "" },
       { "name": "image", "type": "string", "default": "" },
       { "name": "link", "type": "string", "default": "" },
-      { "name": "link_text", "type": "string", "default": "Ver más" }
+      { "name": "linkText", "type": "string", "default": "Ver más" }
     ],
     "performance": {
       "lazyLoading": true,
@@ -77,6 +77,16 @@
       { "name": "subtitle", "type": "string", "default": "" },
       { "name": "testimonials", "type": "array", "default": "[]" }
     ],
+    "arrayFields": {
+      "testimonials": [
+        { "name": "name", "type": "string", "fieldType": "text" },
+        { "name": "role", "type": "string", "fieldType": "text" },
+        { "name": "content", "type": "string", "fieldType": "textarea" },
+        { "name": "rating", "type": "number", "fieldType": "number" },
+        { "name": "user_photo", "type": "string", "fieldType": "image" },
+        { "name": "course", "type": "string", "fieldType": "text" }
+      ]
+    },
     "performance": {
       "lazyLoading": true,
       "preloadImages": false
@@ -103,7 +113,7 @@
     ]
   },
   "test-showcase": {
-    "type": "comprehensive",
+    "type": "static",
     "phpFunction": "render_test_showcase",
     "parameters": [
       { "name": "title", "type": "string", "default": "Test Showcase - Validación Completa" },

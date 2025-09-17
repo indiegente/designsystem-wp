@@ -7,6 +7,7 @@ const ThemeStructure = require('./managers/theme-structure');
 const GenerationValidator = require('./validation/validator');
 const SEOManager = require('./managers/seo-manager');
 const AnalyticsManager = require('./managers/analytics-manager');
+const ACFManager = require('./managers/acf-manager');
 const ValidationManager = require('./validation/validation-manager');
 const PHPValidator = require('./validation/php-validator');
 const ConfigManager = require('./core/config-manager');
@@ -41,6 +42,7 @@ class WordPressGenerator {
     this.assetManager = new AssetManager(this.config);
     this.validator = new GenerationValidator(this.config);
     this.seoManager = new SEOManager(this.config);
+    this.acfManager = new ACFManager(this.config);
     this.validationManager = new ValidationManager(this.config);
     this.phpValidator = new PHPValidator(this.config);
   }
@@ -111,8 +113,19 @@ class WordPressGenerator {
       const fullConfig = { ...this.config, analytics: dynamicConfig.analytics };
       const analyticsManager = new AnalyticsManager(fullConfig);
       analyticsManager.generateAnalyticsFile();
-      
-      // 7. Ejecutar validación y generar fallbacks
+
+      // 7. Generar campos ACF automáticamente
+      console.log('🔍 Generando campos ACF automáticamente...');
+      try {
+        const acfStats = this.acfManager.generateACFFields();
+        if (acfStats) {
+          console.log(`✅ ACF: ${acfStats.fieldGroups} grupos, ${acfStats.totalFields} campos generados`);
+        }
+      } catch (error) {
+        console.log('⚠️ ACF: Sin campos ACF para generar');
+      }
+
+      // 8. Ejecutar validación y generar fallbacks
       const isValid = this.validationManager.validateGeneration();
       
       // 7. Validar generación final

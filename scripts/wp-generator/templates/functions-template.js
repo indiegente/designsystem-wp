@@ -28,15 +28,37 @@ class FunctionsTemplate {
       .map(([postType, config]) => {
         const supports = config.supports ? `array('${config.supports.join("', '")}')` : "array('title', 'editor')";
         const showInRest = config.show_in_rest ? "'show_in_rest' => true," : "";
-        
+        const menuIcon = config.menu_icon || 'dashicons-admin-post';
+
         return `    // ${config.labels.name}
     register_post_type('${postType}', array(
         'labels' => array(
             'name' => '${config.labels.name}',
-            'singular_name' => '${config.labels.singular_name}'
+            'singular_name' => '${config.labels.singular_name}',
+            'menu_name' => '${config.labels.name}',
+            'add_new' => 'Agregar Nuevo',
+            'add_new_item' => 'Agregar Nuevo ${config.labels.singular_name}',
+            'edit_item' => 'Editar ${config.labels.singular_name}',
+            'new_item' => 'Nuevo ${config.labels.singular_name}',
+            'view_item' => 'Ver ${config.labels.singular_name}',
+            'search_items' => 'Buscar ${config.labels.name}',
+            'not_found' => 'No se encontraron ${config.labels.name.toLowerCase()}',
+            'not_found_in_trash' => 'No se encontraron ${config.labels.name.toLowerCase()} en la papelera',
+            'all_items' => 'Todos los ${config.labels.name}',
+            'archives' => 'Archivos de ${config.labels.name}',
+            'insert_into_item' => 'Insertar en ${config.labels.singular_name.toLowerCase()}',
+            'uploaded_to_this_item' => 'Subido a este ${config.labels.singular_name.toLowerCase()}',
+            'filter_items_list' => 'Filtrar lista de ${config.labels.name.toLowerCase()}',
+            'items_list_navigation' => 'Navegación de lista de ${config.labels.name.toLowerCase()}',
+            'items_list' => 'Lista de ${config.labels.name.toLowerCase()}'
         ),
         'public' => ${config.public ? 'true' : 'false'},
+        'menu_position' => 20,
+        'menu_icon' => '${menuIcon}',
+        'has_archive' => true,
         'supports' => ${supports},
+        'capability_type' => 'post',
+        'map_meta_cap' => true,
         ${showInRest}
     ));`;
       })
@@ -179,7 +201,13 @@ function ${this.functionPrefix}_load_advanced_modules() {
     if (file_exists($analytics_file)) {
         require_once $analytics_file;
     }
-    
+
+    // Cargar campos ACF generados automáticamente
+    $acf_file = get_template_directory() . '/inc/acf-fields.php';
+    if (file_exists($acf_file)) {
+        require_once $acf_file;
+    }
+
     // Cargar sistema de assets optimizados - DESHABILITADO para evitar duplicados
     // El enqueue de assets se maneja directamente en functions.php
     // $assets_file = get_template_directory() . '/inc/asset-enqueue.php';

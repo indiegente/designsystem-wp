@@ -15,7 +15,7 @@ class PhpComponentTemplate {
     return {};
   }
 
-  generate(componentName, props, cssClasses) {
+  generate(componentName, props, cssClasses, fieldTypes = {}) {
     this.currentComponentName = componentName; // Trackear componente actual
     const functionName = `render_${componentName.replace('-', '_')}`;
     
@@ -31,7 +31,7 @@ class PhpComponentTemplate {
 
 function ${functionName}(${propsParams}) {
     ?>
-    ${this.generatePhpTemplate(componentName, props)}
+    ${this.generatePhpTemplate(componentName, props, fieldTypes)}
 
     <?php
 }
@@ -49,81 +49,46 @@ add_action('wp_head', function() {
 ?>`;
   }
 
-  generatePhpTemplate(componentName) {
-    // Intentar generar template dinámicamente desde el componente Lit
-    const dynamicTemplate = this.generateTemplateFromLitComponent(componentName);
-    if (dynamicTemplate) {
-      return dynamicTemplate;
-    }
-    
-    // Fallback a templates hardcodeados solo para testimonials (muy complejo)
-    const fallbackTemplates = {
-      'testimonials': `
-        <div class="testimonials-section">
-            <div class="testimonials-container">
-                <div class="testimonials-header">
-                    <h2 class="testimonials-title"><?php echo esc_html($title); ?></h2>
-                    <p class="testimonials-subtitle"><?php echo esc_html($subtitle); ?></p>
-                </div>
-                
-                <div class="testimonials-grid">
-                    <?php if (!empty($testimonials)): ?>
-                        <?php foreach ($testimonials as $testimonial): ?>
-                            <div class="testimonial-card">
-                                <div class="rating">
-                                    <?php for ($i = 1; $i <= 5; $i++): ?>
-                                        <span class="star"><?php echo $i <= $testimonial['rating'] ? '★' : '☆'; ?></span>
-                                    <?php endfor; ?>
-                                </div>
-                                <p class="testimonial-content">"<?php echo esc_html($testimonial['content']); ?>"</p>
-                                <div class="testimonial-author">
-                                    <?php if (!empty($testimonial['avatar'])): ?>
-                                        <img src="<?php echo esc_url($testimonial['avatar']); ?>" alt="<?php echo esc_attr($testimonial['name']); ?>" class="author-avatar" />
-                                    <?php else: ?>
-                                        <div class="author-avatar" style="background: var(--tl-primary-500); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
-                                            <?php echo esc_html(strtoupper(substr($testimonial['name'], 0, 1))); ?>
-                                        </div>
-                                    <?php endif; ?>
-                                    <div class="author-info">
-                                        <div class="author-name"><?php echo esc_html($testimonial['name']); ?></div>
-                                        <div class="author-role"><?php echo esc_html($testimonial['role']); ?></div>
-                                        <?php if (!empty($testimonial['course'])): ?>
-                                            <div class="author-course"><?php echo esc_html($testimonial['course']); ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <p><?php _e('No hay testimonios disponibles.', '${this.config.themeName || "theme"}'); ?></p>
-                    <?php endif; ?>
-                </div>
-            </div>
-        </div>`
-    };
+  generatePhpTemplate(componentName, props, fieldTypes = {}) {
+    // FAIL FAST: Solo generar desde componente Lit - sin fallbacks
+    const dynamicTemplate = this.generateTemplateFromLitComponent(componentName, fieldTypes);
+    if (!dynamicTemplate) {
+      throw new Error(`❌ PHP TEMPLATE ERROR: No se pudo generar template para '${componentName}'
 
-    return fallbackTemplates[componentName] || `
-        <!-- Template genérico para ${componentName} -->
-        <?php foreach ($props as $prop => $value): ?>
-            <span class="<?php echo esc_attr($prop); ?>">
-                <?php echo esc_html($value); ?>
-            </span>
-        <?php endforeach; ?>`;
+🔧 SOLUCIONES:
+1. Verificar que existe src/components/${componentName}/${componentName}.js
+2. Verificar que el componente Lit tiene método render() válido
+3. Verificar que el template HTML está bien formado
+
+💡 UBICACIÓN: src/components/${componentName}/${componentName}.js
+🚨 SIN FALLBACKS: Solo generación dinámica desde Lit soportada`);
+    }
+
+    return dynamicTemplate;
   }
 
   generatePhpParameters(componentName) {
     const metadata = this.metadata[componentName];
     if (!metadata) {
-      // Si no hay metadata, intentar extraer propiedades del componente Lit
-      const litProps = this.extractLitProperties(componentName);
-      if (litProps.length > 0) {
-        return litProps
-          .map(prop => `$${this.convertPropName(prop.name)} = '${prop.default || ''}'`)
-          .join(', ');
-      }
-      return '';
+      throw new Error(`❌ PHP PARAMETERS ERROR: No metadata para componente '${componentName}'
+
+🔧 SOLUCIÓN:
+Verificar que existe configuración en src/metadata.json para componente '${componentName}'
+
+💡 UBICACIÓN: src/metadata.json
+🚨 SIN FALLBACKS: Solo metadata explícita soportada`);
     }
-    
+
+    if (!metadata.parameters) {
+      throw new Error(`❌ PHP PARAMETERS ERROR: Componente '${componentName}' no tiene parameters definidos
+
+🔧 SOLUCIÓN:
+Agregar section 'parameters' en metadata.json para componente '${componentName}'
+
+💡 UBICACIÓN: src/metadata.json → "${componentName}" → "parameters"
+🚨 SIN FALLBACKS: Solo parameters explícitos soportados`);
+    }
+
     return metadata.parameters
       .map(param => `$${param.name} = '${param.default}'`)
       .join(', ');
@@ -132,7 +97,7 @@ add_action('wp_head', function() {
   /**
    * Genera template PHP dinámicamente desde el componente Lit
    */
-  generateTemplateFromLitComponent(componentName) {
+  generateTemplateFromLitComponent(componentName, fieldTypes = {}) {
     const componentPath = path.join(this.config.srcDir, 'components', componentName, `${componentName}.js`);
     
     if (!fs.existsSync(componentPath)) {
@@ -144,7 +109,7 @@ add_action('wp_head', function() {
       const htmlTemplate = this.extractHtmlTemplate(componentContent);
       
       if (htmlTemplate) {
-        return this.convertLitTemplateToPhp(htmlTemplate, componentName);
+        return this.convertLitTemplateToPhp(htmlTemplate, componentName, fieldTypes);
       }
     } catch (error) {
       console.warn(`No se pudo procesar dinámicamente ${componentName}: ${error.message}`);
@@ -170,20 +135,20 @@ add_action('wp_head', function() {
   /**
    * Convierte un template Lit a PHP
    */
-  convertLitTemplateToPhp(litTemplate, componentName) {
+  convertLitTemplateToPhp(litTemplate, componentName, fieldTypes = {}) {
     let phpTemplate = litTemplate;
     
     // Manejar arrays con map() - soportar parámetros múltiples (img, index)
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\(([^,)]+)(?:,\s*(\w+))?\)\s*=>\s*html`([\s\S]*?)`\)\}/g, 
       (match, arrayProp, itemVar, indexVar, itemTemplate) => {
-        let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp, itemVar, indexVar);
+        let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp, itemVar, indexVar, fieldTypes);
         return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as ${indexVar ? '$index => ' : ''}$item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p><?php _e('No hay elementos disponibles.', '${this.config.themeName || "theme"}'); ?></p><?php endif; ?>`;
       });
     
     // Fallback para patrón simple sin paréntesis
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+)\.map\(\w+ => html`([\s\S]*?)`\)\}/g, 
       (match, arrayProp, itemTemplate) => {
-        let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp);
+        let phpItemTemplate = this.convertArrayItemTemplate(itemTemplate, arrayProp, null, null, fieldTypes);
         return `<?php if (!empty($${arrayProp})): ?><?php foreach ($${arrayProp} as $item): ?>${phpItemTemplate}<?php endforeach; ?><?php else: ?><p><?php _e('No hay elementos disponibles.', '${this.config.themeName || "theme"}'); ?></p><?php endif; ?>`;
       });
     
@@ -201,7 +166,7 @@ add_action('wp_head', function() {
     // Manejar bloques condicionales complejos con templates anidados
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+) \? html`([\s\S]*?)` : (['"][^'"]*['"]|''|`[\s\S]*?`)\}/g, 
       (match, condition, trueBranch, falseBranch) => {
-        let phpTrue = this.convertSimpleInterpolations(trueBranch);
+        let phpTrue = this.convertSimpleInterpolations(trueBranch, null, fieldTypes);
         let phpFalse = falseBranch === "''" || falseBranch === '""' ? '' : falseBranch;
         const phpCondition = this.convertPropName(condition);
         return `<?php if ($${phpCondition}): ?>${phpTrue}<?php else: ?>${phpFalse}<?php endif; ?>`;
@@ -210,13 +175,13 @@ add_action('wp_head', function() {
     // Manejar bloques condicionales con templates anidados (caso específico)
     phpTemplate = phpTemplate.replace(/\$\{this\.(\w+) \? html`([\s\S]*?)` : html`([\s\S]*?)`\}/g, 
       (match, condition, trueBranch, falseBranch) => {
-        let phpTrue = this.convertSimpleInterpolations(trueBranch);
-        let phpFalse = this.convertSimpleInterpolations(falseBranch);
+        let phpTrue = this.convertSimpleInterpolations(trueBranch, null, fieldTypes);
+        let phpFalse = this.convertSimpleInterpolations(falseBranch, null, fieldTypes);
         return `<?php if ($${condition}): ?>${phpTrue}<?php else: ?>${phpFalse}<?php endif; ?>`;
       });
     
     // Luego convertir interpolaciones simples restantes
-    phpTemplate = this.convertSimpleInterpolations(phpTemplate);
+    phpTemplate = this.convertSimpleInterpolations(phpTemplate, null, fieldTypes);
     
     // Agregar lazy loading basado en metadata del componente
     const componentMetadata = this.metadata[componentName];
@@ -230,7 +195,7 @@ add_action('wp_head', function() {
   /**
    * Convierte template de item de array
    */
-  convertArrayItemTemplate(itemTemplate, arrayProp, itemVar = null, indexVar = null) {
+  convertArrayItemTemplate(itemTemplate, arrayProp, itemVar = null, indexVar = null, fieldTypes = {}) {
     // Para feature-grid, convertir ${feature.property} a <?php echo $item['property']; ?>
     let phpTemplate = itemTemplate;
     
@@ -244,8 +209,8 @@ add_action('wp_head', function() {
     phpTemplate = phpTemplate.replace(
       new RegExp(`\\$\\{${itemVar}\\.(\\w+) \\? html\`([\\s\\S]*?)\` : html\`([\\s\\S]*?)\`\\}`, 'g'),
       (match, propName, trueBranch, falseBranch) => {
-        const phpTrue = this.convertSimpleInterpolations(trueBranch, itemVar);
-        const phpFalse = this.convertSimpleInterpolations(falseBranch, itemVar);
+        const phpTrue = this.convertSimpleInterpolations(trueBranch, itemVar, fieldTypes);
+        const phpFalse = this.convertSimpleInterpolations(falseBranch, itemVar, fieldTypes);
         return `<?php if (!empty($item['${propName}'])): ?>${phpTrue}<?php else: ?>${phpFalse}<?php endif; ?>`;
       }
     );
@@ -254,7 +219,7 @@ add_action('wp_head', function() {
     phpTemplate = phpTemplate.replace(
       new RegExp(`\\$\\{${itemVar}\\.(\\w+) \\? html\`([\\s\\S]*?)\` : ['"]['"]\\}`, 'g'),
       (match, propName, trueBranch) => {
-        const phpTrue = this.convertSimpleInterpolations(trueBranch, itemVar);
+        const phpTrue = this.convertSimpleInterpolations(trueBranch, itemVar, fieldTypes);
         return `<?php if (!empty($item['${propName}'])): ?>${phpTrue}<?php endif; ?>`;
       }
     );
@@ -276,7 +241,7 @@ add_action('wp_head', function() {
   /**
    * Convierte interpolaciones simples ${this.prop} o ${item.prop}
    */
-  convertSimpleInterpolations(template, itemVar = null) {
+  convertSimpleInterpolations(template, itemVar = null, fieldTypes = {}) {
     if (itemVar) {
       // Convertir ${item.prop} a <?php echo $item['prop']; ?>
       return template.replace(new RegExp(`\\$\\{${itemVar}\\.(\\w+)(?:\\.(\\w+)\\(\\))?\\}`, 'g'), (match, prop, method) => {
@@ -286,12 +251,21 @@ add_action('wp_head', function() {
             return `<?php echo esc_html(strtoupper(substr($item['${prop}'], 0, 1))); ?>`;
           }
         }
-        
-        if (prop === 'avatar' || prop.includes('image')) {
-          return `<?php echo esc_url($item['${prop}']); ?>`;
-        } else if (prop === 'name' || prop === 'alt') {
-          return `<?php echo esc_attr($item['${prop}']); ?>`;
+
+        // CORREGIDO: Solo usar fieldType explícito, sin detección por nombres
+        const fieldType = fieldTypes[prop];
+        if (fieldType === 'image') {
+          return `<?php
+            if (!empty($item['${prop}'])) {
+              if (is_numeric($item['${prop}'])) {
+                echo esc_url(wp_get_attachment_image_url((int) $item['${prop}'], 'full') ?: '');
+              } elseif (filter_var($item['${prop}'], FILTER_VALIDATE_URL)) {
+                echo esc_url($item['${prop}']);
+              }
+            }
+          ?>`;
         } else {
+          // Usar esc_html por defecto para todo el contenido
           return `<?php echo esc_html($item['${prop}']); ?>`;
         }
       });
