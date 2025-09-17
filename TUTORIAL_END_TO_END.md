@@ -477,21 +477,21 @@ La metadata es el corazón del sistema de generación automática. Define cómo 
 }
 ```
 
-##### **2. `wordpressData` (en metadata.json)**
-- **CÓMO mapear campos**: Define el mapeo ESPECÍFICO de cada propiedad
-- **NIVEL DETALLADO**: Configuración granular de campos
+##### **2. `arrayFields` (en metadata.json)**
+- **QUÉ tipo de campo**: Define el fieldType ESPECÍFICO de cada propiedad
+- **NIVEL DETALLADO**: Configuración de tipos de campo para ACF y validación
 - **UBICACIÓN**: `src/metadata.json`
 
 ```json
 {
   "product-card": {
-    "wordpressData": {
-      "fields": {
-        "title": {"source": "post_title", "type": "native"},     // ← CÓMO: título viene de post_title
-        "price": {"source": "meta_precio", "type": "acf"},       // ← CÓMO: precio viene de custom field
-        "image": {"source": "post_thumbnail_url", "type": "native"}  // ← CÓMO: imagen viene de thumbnail
-      }
-    }
+    "type": "aggregated",
+    "arrayFields": [
+      {"name": "title", "type": "string", "fieldType": "text"},
+      {"name": "price", "type": "string", "fieldType": "text"},
+      {"name": "image", "type": "string", "fieldType": "image"},
+      {"name": "featured", "type": "boolean", "fieldType": "boolean"}
+    ]
   }
 }
 ```
@@ -500,8 +500,8 @@ La metadata es el corazón del sistema de generación automática. Define cómo 
 
 ```mermaid
 graph TD
-    A[page-templates.json] -->|dataSource: "post"| B[Component Generator]
-    C[metadata.json] -->|wordpressData.fields| B
+    A[page-templates.json] -->|dataSource.mapping| B[Component Generator]
+    C[metadata.json] -->|arrayFields.fieldType| B
     B --> D[Código PHP generado]
 
     D --> E[Consulta WordPress: get_posts]
@@ -523,35 +523,46 @@ graph TD
 }
 ```
 
-**metadata.json** (CÓMO mapear):
+**page-templates.json** (DÓNDE viene el dato):
 ```json
 {
-  "product-card": {
-    "type": "comprehensive",
-    "wordpressData": {
-      "fields": {
-        "title": {"source": "post_title", "type": "native"},
-        "description": {"source": "post_excerpt", "type": "native"},
-        "price": {"source": "meta_precio", "type": "acf"},
-        "featured": {"source": "meta_destacado", "type": "acf"}
+  "page-productos": {
+    "components": [{
+      "name": "product-card",
+      "dataSource": {
+        "type": "post",
+        "postType": "producto",
+        "mapping": {
+          "title": {"source": "post_title", "type": "native"},
+          "description": {"source": "post_excerpt", "type": "native"},
+          "price": {"source": "meta_precio", "type": "acf"},
+          "featured": {"source": "meta_destacado", "type": "acf"}
+        }
       }
-    }
+    }]
   }
 }
 ```
 
 **🎯 PHP Generado Automáticamente:**
 ```php
-// El sistema combina ambas configuraciones:
-$productos = get_posts(['post_type' => 'producto']); // ← dataSource: "post"
-foreach ($productos as $post) {
-    render_product_card(
-        $post->post_title,                              // ← wordpressData.fields.title
-        $post->post_excerpt,                            // ← wordpressData.fields.description
-        get_post_meta($post->ID, 'precio', true),      // ← wordpressData.fields.price (ACF)
-        get_post_meta($post->ID, 'destacado', true)    // ← wordpressData.fields.featured (ACF)
+// El sistema combina metadata.json + page-templates.json:
+$productos = get_posts(['post_type' => 'producto']); // ← dataSource.postType
+$productos_data = array();
+foreach ($productos as $item) {
+    $productos_data[] = array(
+        'title' => get_the_title($item),                           // ← mapping.title
+        'description' => get_the_excerpt($item),                   // ← mapping.description
+        'price' => get_field('precio', $item->ID) ?: '',          // ← mapping.price (ACF)
+        'featured' => (function() use ($item) {                   // ← mapping.featured (ACF + fieldType: "image")
+            $field = get_field('destacado', $item->ID);
+            if (is_array($field) && isset($field['url'])) return $field['url'];
+            if (is_numeric($field) && !empty($field)) return wp_get_attachment_image_url((int) $field, 'full') ?: '';
+            return '';
+        })()
     );
 }
+render_product_card($productos_data);
 ```
 
 ##### **⚡ Tipos de DataSource Válidos**
@@ -602,7 +613,6 @@ foreach ($productos as $post) {
 | **`static`** | ❌ **SOLO props** | Ignora dataSource (error si existe) |
 | **`iterative`** | 🥇 **dataSource** | WordPress data siempre gana, props solo para fallback |
 | **`aggregated`** | 🔄 **Híbrido** | dataSource para arrays, props para configuración |
-| **`comprehensive`** | 🧠 **Inteligente** | dataSource si existe, props como fallback por campo |
 
 ##### **📚 EJEMPLOS DETALLADOS POR TIPO:**
 
@@ -681,39 +691,11 @@ render_testimonials(
 );
 ```
 
-###### **4. Tipo `comprehensive` - Inteligente por campo**
-```json
-// page-templates.json
-{
-  "name": "test-showcase",
-  "props": {
-    "title": "Título por defecto",           // ← Fallback
-    "enableAnalytics": true                  // ← Valor cuando WP vacío
-  },
-  "dataSource": {
-    "wordpressData": {
-      "fields": {
-        "title": {"source": "post_title", "type": "native"}  // ← Prioridad
-      }
-    }
-  }
-}
-```
-
-**PHP generado:**
-```php
-render_test_showcase(
-    get_the_title() ?: 'Título por defecto',           // ← WordPress O fallback
-    get_post_meta(get_the_ID(), 'analytics', true) ?: true  // ← Meta O default
-);
-```
-
 ##### **🎯 REGLAS MEMORABLES:**
 
 1. **`static`**: "Props únicos, no WordPress"
 2. **`iterative`**: "WordPress first, props backup"
 3. **`aggregated`**: "WordPress para contenido, props para estructura"
-4. **`comprehensive`**: "WordPress cuando existe, props cuando falta"
 
 ##### **❌ ERROR COMÚN: Confundir los Niveles**
 
@@ -760,7 +742,7 @@ render_test_showcase(
 
 #### 3.1 Estructura General del Metadata
 
-El archivo `src/component-metadata.json` contiene cuatro secciones principales:
+El archivo `src/metadata.json` contiene las configuraciones principales de componentes:
 
 ```json
 {
@@ -840,136 +822,359 @@ Conecta componentes con sus fuentes de datos:
 
 ---
 
-#### 3.5 Configuración por Componente - Los Tipos Principales
+#### 3.5 Arquitectura Actualizada - Tipos de Componentes y Configuración
 
-Cada componente tiene una configuración detallada. Hay **4 tipos principales:**
+### **🧩 TIPOS DE COMPONENTES (Arquitectura Actual)**
 
-##### **Tipo 1: STATIC** - Componentes con datos fijos
+#### **1. STATIC COMPONENTS** - Datos fijos hardcodeados
 
 Para componentes como heroes, headers, footers que no cambian dinámicamente.
 
+**metadata.json:**
 ```json
-"hero-section": {
-  "type": "static",
-  "phpFunction": "render_hero_section",
-  "parameters": [
-    { "name": "title", "type": "string", "default": "" },
-    { "name": "subtitle", "type": "string", "default": "" }
-  ],
-  "template": "hero-section"
-}
-```
-
-| Atributo | Descripción |
-|----------|-------------|
-| `type: "static"` | No consume datos WordPress, usa valores fijos |
-| `phpFunction` | Nombre de la función PHP generada |
-| `parameters` | Array de propiedades del componente Lit |
-| `template` | Nombre del template (sin extensión) |
-
-##### **Tipo 2: ITERATIVE** - Un componente por cada post
-
-Para cards, items que se repiten individualmente.
-
-```json
-"product-card": {
-  "type": "iterative",
-  "phpFunction": "render_product_card", 
-  "parameters": [
-    { "name": "title", "type": "string", "default": "" },
-    { "name": "price", "type": "string", "default": "" },
-    { "name": "featured", "type": "boolean", "default": false }
-  ],
-  "template": "product-card",
-  "iteration": {
-    "mode": "individual",
-    "renderPerItem": true
+{
+  "hero-section": {
+    "type": "static",
+    "parameters": [
+      { "name": "title", "type": "string" },
+      { "name": "subtitle", "type": "string" },
+      { "name": "ctaText", "type": "string" }
+    ]
   }
 }
 ```
 
-| Atributo | Descripción |
-|----------|-------------|
-| `iteration.mode: "individual"` | Se crea una instancia por cada post |
-| `iteration.renderPerItem: true` | Cada post genera su propio HTML |
-
-**🔄 Mapeo automático de datos:**
-- `title` (Lit) ← `post_title` (WordPress)  
-- `description` (Lit) ← `post_content` (WordPress)
-- `image` (Lit) ← `thumbnail` (WordPress)
-- `featured` (Lit) ← `meta_featured` (WordPress meta field)
-
-##### **Tipo 3: AGGREGATED** - Un componente con array de datos
-
-Para componentes que muestran múltiples posts en una sola instancia.
-
+**page-templates.json:**
 ```json
-"testimonials": {
-  "type": "aggregated",
-  "phpFunction": "render_testimonials",
-  "parameters": [
-    { "name": "title", "type": "string", "default": "" },
-    { "name": "testimonials", "type": "array", "default": "[]" }
-  ],
-  "template": "testimonials",
-  "aggregation": {
-    "mode": "collect",
-    "dataStructure": {
-      "name": "post_title",
-      "role": "post_excerpt",
-      "content": "post_content", 
-      "rating": "meta_rating",
-      "avatar": "meta_avatar"
-    },
-    "defaultValues": {
-      "rating": 5
-    }
+{
+  "page-inicio": {
+    "components": [{
+      "name": "hero-section",
+      "props": {
+        "title": "Bienvenidos a Toulouse",
+        "subtitle": "Descubre tu potencial creativo",
+        "ctaText": "Comenzar"
+      }
+    }]
   }
 }
 ```
 
-| Atributo | Descripción |
-|----------|-------------|
-| `aggregation.mode: "collect"` | Recolecta múltiples posts en un array |
-| `aggregation.dataStructure` | Mapeo entre campos Lit y WordPress |
-| `aggregation.defaultValues` | Valores por defecto si faltan datos |
-
-**🔄 Ejemplo de resultado:**
+**PHP generado:**
 ```php
-// WordPress genera automáticamente:
-$testimonials = [
-  ["name" => "Juan Pérez", "role" => "Estudiante", "rating" => 5],
-  ["name" => "María García", "role" => "Graduada", "rating" => 4]
-];
-render_testimonials("Testimonios", "", $testimonials);
+render_hero_section('Bienvenidos a Toulouse', 'Descubre tu potencial creativo', 'Comenzar');
 ```
 
-##### **Tipo 4: INTERACTIVE** - Componentes con estado JavaScript
+---
 
-Para galerías, carruseles, componentes que requieren interactividad.
+#### **2. ITERATIVE COMPONENTS** - Un componente por cada post
 
+Para cards, items que se repiten individualmente (bucles simples).
+
+**metadata.json:**
 ```json
-"interactive-gallery": {
-  "type": "interactive",
-  "phpFunction": "render_interactive_gallery",
-  "parameters": [
-    { "name": "images", "type": "array", "default": "[]" },
-    { "name": "autoPlay", "type": "boolean", "default": "true" }
-  ],
-  "template": "interactive-gallery",
-  "interaction": {
-    "mode": "stateful",
-    "events": ["image-changed", "autoplay-toggled"],
-    "stateManagement": true
+{
+  "course-card": {
+    "type": "iterative",
+    "parameters": [
+      { "name": "title", "type": "string" },
+      { "name": "description", "type": "string" },
+      { "name": "image", "type": "string" },
+      { "name": "link", "type": "string" }
+    ]
   }
 }
 ```
 
-| Atributo | Descripción |
-|----------|-------------|
-| `interaction.mode: "stateful"` | Mantiene estado JavaScript |
-| `interaction.events` | Eventos que el componente puede disparar |
-| `interaction.stateManagement: true` | Requiere JavaScript para funcionar |
+**page-templates.json:**
+```json
+{
+  "page-carreras": {
+    "components": [{
+      "name": "course-card",
+      "props": {
+        "title": "",
+        "description": "",
+        "image": "",
+        "link": ""
+      },
+      "dataSource": {
+        "type": "post",
+        "postType": "carrera",
+        "query": { "numberposts": -1 },
+        "mapping": {
+          "title": { "source": "post_title", "type": "native" },
+          "description": { "source": "post_excerpt", "type": "native" },
+          "image": { "source": "post_thumbnail_url", "type": "native" },
+          "link": { "source": "post_permalink", "type": "native" }
+        }
+      }
+    }]
+  }
+}
+```
+
+**PHP generado:**
+```php
+$items = get_posts(['numberposts' => -1, 'post_status' => 'publish', 'post_type' => 'carrera']);
+if (!empty($items)) {
+    foreach ($items as $item) {
+        render_course_card(
+            get_the_title($item),
+            get_the_excerpt($item),
+            get_the_post_thumbnail_url($item, 'medium'),
+            get_permalink($item)
+        );
+    }
+}
+```
+
+---
+
+#### **3. AGGREGATED COMPONENTS** - Un componente con array de datos complejos
+
+Para componentes que coleccionan múltiples posts en un solo array (con ACF fields).
+
+**metadata.json:**
+```json
+{
+  "testimonials": {
+    "type": "aggregated",
+    "parameters": [
+      { "name": "title", "type": "string" },
+      { "name": "subtitle", "type": "string" },
+      { "name": "testimonials", "type": "array" }
+    ],
+    "arrayFields": [
+      { "name": "name", "type": "string", "fieldType": "text" },
+      { "name": "role", "type": "string", "fieldType": "text" },
+      { "name": "content", "type": "string", "fieldType": "textarea" },
+      { "name": "rating", "type": "number", "fieldType": "number" },
+      { "name": "user_photo", "type": "string", "fieldType": "image" },
+      { "name": "course", "type": "string", "fieldType": "text" }
+    ]
+  }
+}
+```
+
+**page-templates.json:**
+```json
+{
+  "page-carreras": {
+    "components": [{
+      "name": "testimonials",
+      "props": {
+        "title": "Lo que dicen nuestros estudiantes",
+        "subtitle": "Testimonios de éxito de nuestros egresados"
+      },
+      "dataSource": {
+        "type": "post",
+        "postType": "testimonio",
+        "query": { "numberposts": 6 },
+        "mapping": {
+          "name": { "source": "post_title", "type": "native" },
+          "role": { "source": "meta_role", "type": "acf" },
+          "content": { "source": "post_content", "type": "native" },
+          "rating": { "source": "meta_rating", "type": "acf" },
+          "user_photo": { "source": "meta_user_photo", "type": "acf" },
+          "course": { "source": "meta_course", "type": "acf" }
+        }
+      }
+    }]
+  }
+}
+```
+
+**PHP generado:**
+```php
+$items = get_posts(['numberposts' => 6, 'post_status' => 'publish', 'post_type' => 'testimonio']);
+$testimonials_data = array();
+if (!empty($items)) {
+    foreach ($items as $item) {
+        $testimonials_data[] = array(
+            'name' => get_the_title($item),
+            'role' => get_field('role', $item->ID) ?: '',
+            'content' => get_the_content(null, false, $item),
+            'rating' => get_field('rating', $item->ID) ?: '',
+            'user_photo' => (function() use ($item) {
+                $field = get_field('user_photo', $item->ID);
+                if (is_array($field) && isset($field['url'])) return $field['url'];
+                if (is_numeric($field) && !empty($field)) return wp_get_attachment_image_url((int) $field, 'full') ?: '';
+                return '';
+            })(),
+            'course' => get_field('course', $item->ID) ?: ''
+        );
+    }
+}
+render_testimonials('Lo que dicen nuestros estudiantes', 'Testimonios de éxito', $testimonials_data);
+```
+
+---
+
+### **📊 TIPOS DE DATOS Y MANEJO**
+
+#### **Tipos Native WordPress**
+| Type | Source | WordPress Function | Uso |
+|------|--------|--------------------|-----|
+| `native` | `post_title` | `get_the_title($item)` | Títulos de posts |
+| `native` | `post_excerpt` | `get_the_excerpt($item)` | Extractos |
+| `native` | `post_content` | `get_the_content(null, false, $item)` | Contenido completo |
+| `native` | `post_thumbnail_url` | `get_the_post_thumbnail_url($item, 'medium')` | Imágenes destacadas |
+| `native` | `post_permalink` | `get_permalink($item)` | URLs de posts |
+
+#### **Tipos ACF (Advanced Custom Fields)**
+| fieldType | ACF Field Type | Manejo Automático | Ejemplo |
+|-----------|----------------|-------------------|---------|
+| `text` | Text | `get_field('campo', $item->ID)` | Nombres, títulos cortos |
+| `textarea` | Textarea | `get_field('campo', $item->ID)` | Descripciones largas |
+| `number` | Number | `get_field('campo', $item->ID)` | Precios, ratings |
+| `boolean` | True/False | `get_field('campo', $item->ID)` | Destacado, activo |
+| `image` | Image | **WordPress-native logic** | Fotos, avatares |
+
+#### **Manejo Automático de Imágenes**
+Cuando `fieldType: "image"`, el sistema aplica automáticamente:
+
+```php
+$field = get_field('user_photo', $item->ID);
+if (is_array($field) && isset($field['url'])) return $field['url'];           // ACF array format
+if (is_numeric($field) && !empty($field)) return wp_get_attachment_image_url((int) $field, 'full') ?: '';  // Attachment ID
+if (is_string($field) && !empty($field)) return $field;                      // Direct URL
+return '';  // Fallback
+```
+
+---
+
+### **🧩 SISTEMA DE EXTENSIONES**
+
+#### **¿Qué son las Extensiones?**
+Las extensiones permiten añadir funcionalidad personalizada al proceso de generación WordPress:
+
+**Ubicación:** `scripts/wp-generator/extensions/`
+
+#### **Estructura de una Extensión**
+```javascript
+// scripts/wp-generator/extensions/mi-extension.js
+class MiExtension {
+    constructor(config, context) {
+        this.config = config;
+        this.context = context;
+    }
+
+    beforeTemplateGeneration(templateName, templateData) {
+        console.log(`🧩 ANTES de generar template: ${templateName}`);
+        // Modificar templateData si es necesario
+        return templateData;
+    }
+
+    afterTemplateGeneration(templateName, generatedContent) {
+        console.log(`🧩 DESPUÉS de generar template: ${templateName}`);
+        // Modificar el contenido PHP generado
+        return generatedContent;
+    }
+
+    beforeComponentRender(componentName, componentData) {
+        console.log(`🧩 ANTES de renderizar: ${componentName}`);
+        return componentData;
+    }
+
+    afterComponentRender(componentName, renderedHTML) {
+        console.log(`🧩 DESPUÉS de renderizar: ${componentName}`);
+        return renderedHTML;
+    }
+}
+
+module.exports = MiExtension;
+```
+
+#### **Hooks Disponibles**
+| Hook | Cuándo se ejecuta | Parámetros | Uso típico |
+|------|-------------------|------------|-----------|
+| `beforeTemplateGeneration` | Antes de generar page-*.php | templateName, templateData | Modificar datos de página |
+| `afterTemplateGeneration` | Después de generar page-*.php | templateName, generatedContent | Añadir código PHP personalizado |
+| `beforeComponentRender` | Antes de renderizar componente | componentName, componentData | Filtrar/validar datos |
+| `afterComponentRender` | Después de renderizar componente | componentName, renderedHTML | Añadir wrappers, analytics |
+
+#### **Extensiones Incluidas**
+
+**Analytics Extension (`extensions/analytics/`):**
+- `ga4-data-layer.js` - Google Analytics 4 integration
+- `facebook-pixel.js` - Facebook Pixel tracking
+- `custom-events.js` - Custom event tracking
+
+**Test Extension (`extensions/test-extension.js`):**
+- Logs detallados del proceso de generación
+- Validación de datos en tiempo real
+
+---
+
+### **🏗️ CUSTOM POST TYPES - MANEJO AUTOMÁTICO**
+
+#### **Auto-Registro desde metadata.json**
+El sistema registra automáticamente Custom Post Types basado en `dataSource.postType`:
+
+```json
+// page-templates.json
+{
+  "dataSource": {
+    "postType": "carrera"  // ← Auto-crea post type 'carrera'
+  }
+}
+```
+
+#### **Configuración por Defecto**
+```php
+// Auto-generado en functions.php
+register_post_type('carrera', array(
+    'labels' => array(
+        'name' => 'Carreras',
+        'singular_name' => 'Carrera'
+    ),
+    'public' => true,
+    'supports' => array('title', 'editor', 'thumbnail', 'excerpt'),
+    'show_in_rest' => true,
+    'has_archive' => true
+));
+```
+
+#### **ACF Fields Auto-Generados**
+Basado en `arrayFields` en metadata.json:
+
+```php
+// Auto-generado en inc/acf-fields.php
+acf_add_local_field_group(array(
+    'key' => 'group_testimonio_fields',
+    'title' => 'Testimonio Fields',
+    'fields' => array(
+        array(
+            'key' => 'field_role',
+            'label' => 'Role',
+            'name' => 'role',
+            'type' => 'text'  // ← Desde fieldType: "text"
+        ),
+        array(
+            'key' => 'field_user_photo',
+            'label' => 'User Photo',
+            'name' => 'user_photo',
+            'type' => 'image'  // ← Desde fieldType: "image"
+        )
+    ),
+    'location' => array(array(array(
+        'param' => 'post_type',
+        'operator' => '==',
+        'value' => 'testimonio'
+    )))
+));
+```
+
+#### **Mapeo fieldType → ACF Type**
+| metadata fieldType | ACF Field Type | WordPress Admin |
+|-------------------|----------------|-----------------|
+| `text` | `text` | Input de texto simple |
+| `textarea` | `textarea` | Área de texto multilinea |
+| `number` | `number` | Input numérico |
+| `boolean` | `true_false` | Checkbox sí/no |
+| `image` | `image` | Selector de imagen media library |
+
 
 ---
 
@@ -2403,7 +2608,7 @@ unzip /tmp/toulouse-lautrec.zip
 **Síntoma**: Error "No se encontró metadata para el componente"
 
 **Solución**:
-1. Verificar que existe entrada en `component-metadata.json`
+1. Verificar que existe entrada en `metadata.json`
 2. Verificar sintaxis JSON válida
 3. Limpiar cache: `rm -rf wordpress-output && npm run wp:generate`
 
@@ -2498,7 +2703,7 @@ El generador implementa **fail-fast con rollback completo** para garantizar cali
 1. **Error de sintaxis PHP** en archivos generados
 2. **Dependencias faltantes** (Composer, PHPCS, Lighthouse)
 3. **Validaciones de calidad fallidas** (PHPCS, managers)
-4. **Configuración inconsistente** en metadata.json
+4. **Configuración inconsistente** en metadata.json/page-templates.json
 
 #### 🚨 Ejemplo Real: hero-section tipo "aggregated"
 
@@ -2549,8 +2754,7 @@ nvm use 24  # OBLIGATORIO antes de npm run wp:generate
 |------|---------------|-----|-----------|
 | `static` | Solo `props` | ❌ NO soportado | Valores fijos hardcodeados |
 | `iterative` | `dataSource` | ✅ Sí | Loops WordPress dinámicos |
-| `aggregated` | `dataSource` + `aggregation` | ✅ Sí | Arrays de datos |
-| `comprehensive` | Complejo | ✅ Sí | Múltiples fuentes |
+| `aggregated` | `dataSource` + `arrayFields` | ✅ Sí | Arrays de datos complejos con ACF |
 
 #### 🚨 Limitaciones Críticas del Sistema
 

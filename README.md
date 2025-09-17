@@ -27,21 +27,34 @@ npm run wp:generate:fast      # Generación rápida sin PHPCS (SKIP_PHPCS=true)
 ```bash
 npm install                   # Instala dependencias (incluye Lighthouse)
 npm run setup                 # Instala Composer + PHPCS WordPress Standards
+npm run setup:composer        # Solo instalar Composer
+npm run setup:phpcs          # Solo instalar PHPCS + WordPress Standards
 ```
 
-### 🧪 **Validaciones**
+### 🧪 **Validación y Calidad**
 ```bash
-npm run wp:validate           # Validación híbrida (managers + herramientas profesionales)
-npm run wp:validate:render    # Validación de renderizado de componentes
-npm run wp:test-urls          # Test de URLs en WordPress vivo
+npm run wp:validate           # Validación híbrida completa
+npm run wp:validate:render    # Solo validación de renderizado
+npm run wp:test-urls          # Test URLs en WordPress vivo
+npm run wp:lint               # WordPress Coding Standards (PHPCS)
+npm run wp:lint:fix           # Auto-fix PHPCS
+npm run phpcs                 # PHPCS directo
+npm run phpcs:fix             # PHPCBF directo
 ```
 
-### 🔧 **WordPress Coding Standards**
+### 📚 **Desarrollo de Componentes**
 ```bash
-npm run phpcs                 # Verificar WordPress Coding Standards
-npm run phpcs:fix             # Corregir automáticamente con PHPCBF
-npm run wp:lint               # Alias para phpcs
-npm run wp:lint:fix           # Alias para phpcs:fix
+npm run dev                   # Vite dev server
+npm run build                 # Build para producción
+npm run storybook             # Documentación interactiva
+npm run build-storybook       # Build de Storybook
+```
+
+### 🧩 **Storybook Stories**
+```bash
+npm run stories:generate      # Generar stories básicas
+npm run stories:generate:robust # Generar stories robustas
+npm run stories:test          # Test del generador de stories
 ```
 
 ## 🏗️ Arquitectura Modernizada
@@ -187,6 +200,63 @@ function render_hero_section($title = '', $description = '') {
 ?>
 ```
 
+## 🧩 Tipos de Componentes y Configuración
+
+### **1. Static Components**
+> Contenido fijo definido en configuración
+
+```json
+{
+  "name": "hero-section",
+  "props": {
+    "title": "Bienvenidos",
+    "subtitle": "Descubre tu potencial creativo",
+    "ctaText": "Comenzar"
+  }
+}
+```
+
+### **2. Iterative Components**
+> Bucles simples sobre colecciones WordPress
+
+```json
+{
+  "name": "course-card",
+  "dataSource": {
+    "type": "post",
+    "postType": "carrera",
+    "query": { "numberposts": -1 },
+    "mapping": {
+      "title": { "source": "post_title", "type": "native" },
+      "image": { "source": "post_thumbnail_url", "type": "native" }
+    }
+  }
+}
+```
+
+### **3. Aggregated Components**
+> Datos complejos con ACF, agregación avanzada
+
+```json
+{
+  "name": "testimonials",
+  "dataSource": {
+    "type": "post",
+    "postType": "testimonio",
+    "mapping": {
+      "user_photo": { "source": "meta_user_photo", "type": "acf" },
+      "rating": { "source": "meta_rating", "type": "acf" }
+    }
+  }
+}
+```
+
+### **🔄 Separación de Responsabilidades**
+
+- **`metadata.json`** - Define QUÉ tipo de campo (`fieldType: "image"`)
+- **`page-templates.json`** - Define DÓNDE viene el dato (`source: "meta_photo"`)
+- **Manejo automático de imágenes** - Convierte IDs a URLs automáticamente
+
 ## ⚙️ Configuración
 
 ### Archivos de Configuración Principales
@@ -251,17 +321,175 @@ npm run wp:generate
 # 4. El tema estará listo en wordpress-output/toulouse-lautrec/
 ```
 
-### Para Desarrollo Continuo
+## 🔄 **Workflow Completo: Storybook → WordPress Deploy**
 
+### **Paso 1: Desarrollo de Componentes**
 ```bash
-# Desarrollo de componentes
-npm run dev                # Vite dev server
-npm run storybook          # Documentación
+# 1.1 Iniciar entorno de desarrollo
+npm run dev                # Vite dev server (componentes Lit)
+npm run storybook          # Documentación interactiva en puerto 6006
 
-# Generación WordPress
-npm run wp:generate        # Full workflow
-npm run wp:validate        # Solo validación
-npm run wp:test-urls       # Test URLs específicas
+# 1.2 Crear/editar componente
+# Editar: src/components/mi-componente/mi-componente.js
+# Verificar en: http://localhost:6006
+```
+
+### **Paso 2: Configurar Metadata y Templates**
+```bash
+# 2.1 Configurar tipo de componente en metadata.json
+{
+  "mi-componente": {
+    "type": "aggregated",
+    "arrayFields": [
+      {"name": "titulo", "type": "string", "fieldType": "text"},
+      {"name": "imagen", "type": "string", "fieldType": "image"}
+    ]
+  }
+}
+
+# 2.2 Configurar datos en page-templates.json
+{
+  "page-ejemplo": {
+    "components": [{
+      "name": "mi-componente",
+      "dataSource": {
+        "type": "post",
+        "postType": "mi_post_type",
+        "mapping": {
+          "titulo": {"source": "post_title", "type": "native"},
+          "imagen": {"source": "meta_imagen", "type": "acf"}
+        }
+      }
+    }]
+  }
+}
+```
+
+### **Paso 3: Generar Stories (Opcional)**
+```bash
+npm run stories:generate         # Stories básicas
+npm run stories:generate:robust  # Stories con datos complejos
+npm run stories:test            # Verificar generador
+```
+
+### **Paso 4: Generar Tema WordPress**
+```bash
+# 4.1 Generación completa con validaciones
+npm run wp:generate
+
+# 4.2 O con opciones específicas
+npm run wp:generate:debug       # Con logs detallados
+npm run wp:generate:fast        # Sin PHPCS (desarrollo rápido)
+```
+
+### **Paso 5: Validar Calidad**
+```bash
+# 5.1 Validación híbrida completa
+npm run wp:validate
+
+# 5.2 Validaciones específicas
+npm run wp:validate:render      # Solo renderizado
+npm run wp:lint                 # Solo PHPCS
+npm run wp:test-urls           # URLs WordPress
+```
+
+### **Paso 6: Deploy en WordPress**
+```bash
+# 6.1 Copiar tema generado
+cp -r wordpress-output/toulouse-lautrec /path/to/wordpress/wp-content/themes/
+
+# 6.2 Activar en WordPress Admin
+# Ve a: Apariencia > Temas > Activar "Toulouse Lautrec"
+
+# 6.3 Verificar custom post types y ACF fields
+# Se auto-crean según configuración en metadata.json
+```
+
+### **Paso 7: Testing en WordPress**
+```bash
+# 7.1 URLs disponibles tras activación:
+# /carreras/        - Lista componentes course-card
+# /contacto/        - Página estática
+# /test-showcase/   - Validación completa
+
+# 7.2 Verificar datos dinámicos
+# Crear posts del tipo configurado en wp-admin
+# Los componentes mostrarán datos reales automáticamente
+```
+
+### **🔄 Para Desarrollo Continuo**
+```bash
+# Ciclo iterativo de desarrollo:
+1. npm run dev              # Modificar componentes
+2. npm run wp:generate      # Regenerar tema
+3. Refresh WordPress        # Ver cambios en vivo
+4. npm run wp:test-urls     # Validar URLs específicas
+```
+
+### **🐛 Troubleshooting para Developers**
+
+**❌ Error: "fieldTypes is not defined"**
+```bash
+# Solución: Verificar metadata.json tiene arrayFields definidos
+# Regenerar con debug para ver logs
+npm run wp:generate:debug
+```
+
+**❌ Error: "src="45" en lugar de URL de imagen"**
+```bash
+# Solución: Campo image debe tener fieldType: "image" en metadata.json
+# El sistema auto-convierte IDs a URLs
+```
+
+**❌ Error: "Componente no renderiza datos"**
+```bash
+# 1. Verificar names exactos entre Lit y page-templates.json
+# 2. Verificar dataSource mapping correcto
+# 3. Usar validación de renderizado:
+npm run wp:validate:render
+```
+
+**❌ Error: "PHPCS fallando"**
+```bash
+# Auto-fix disponible:
+npm run wp:lint:fix
+# O skip para desarrollo rápido:
+npm run wp:generate:fast
+```
+
+### **💡 Tips para Developers**
+
+**🚀 Desarrollo Rápido:**
+```bash
+# Skip validaciones para iteración rápida
+npm run wp:generate:fast
+
+# Solo regenerar un componente específico
+# (editar src/page-templates.json para incluir solo ese componente)
+```
+
+**🔍 Debug Avanzado:**
+```bash
+# Logs detallados de generación
+DEBUG_MODE=true npm run wp:generate
+
+# Ver estructura generada
+ls -la wordpress-output/toulouse-lautrec/
+
+# Verificar sintaxis PHP individual
+php -l wordpress-output/toulouse-lautrec/components/mi-componente/mi-componente.php
+```
+
+**📋 Validación Granular:**
+```bash
+# Solo validar managers específicos
+npm run wp:validate
+
+# Solo validar URLs específicas
+npm run wp:test-urls
+
+# Solo validar renderizado
+npm run wp:validate:render
 ```
 
 ## 🎯 WordPress Best Practices
@@ -276,6 +504,35 @@ npm run wp:test-urls       # Test URLs específicas
 - ✅ `__()` y `_e()` para todos los textos
 - ✅ Text domain consistente
 - ✅ Sin strings hardcodeados
+
+## 🚀 WordPress Deployment
+
+### **Instalación del Tema**
+
+1. **Copia el tema generado:**
+   ```bash
+   cp -r wordpress-output/toulouse-lautrec /path/to/wordpress/wp-content/themes/
+   ```
+
+2. **Activa el tema en WordPress Admin:**
+   - Ve a `Apariencia > Temas`
+   - Activa "Toulouse Lautrec"
+
+### **Configuración de Custom Post Types**
+
+El tema incluye ACF fields automáticamente. Para usar los custom post types:
+
+```php
+// Se auto-registran: carrera, testimonio
+// ACF fields se auto-crean según metadata.json
+```
+
+### **URLs de Prueba**
+
+Una vez instalado, estas páginas estarán disponibles:
+- `/carreras/` - Lista de carreras con course-cards
+- `/contacto/` - Página de contacto
+- `/test-showcase/` - Validación de todos los managers
 
 ### Estructura WordPress
 - ✅ `get_template_part()` en lugar de `require`

@@ -129,8 +129,9 @@ if (allValidationsPass) {
 ### Orden de prioridad para leer archivos:
 1. **`.rules`** - Reglas críticas del proyecto
 2. **`scripts/wp-generator/core/config.js`** - Configuración central
-3. **`src/metadata.json`** - Metadata de componentes
-4. **`package.json`** - Scripts y dependencias actualizadas
+3. **`src/metadata.json`** - Metadata de componentes (fieldTypes)
+4. **`src/page-templates.json`** - Configuración de datos (dataSources)
+5. **`package.json`** - Scripts y dependencias actualizadas
 
 ### WordPress Best Practices Aplicadas
 - ✅ **Escapado obligatorio**: `esc_html()`, `esc_url()`, `esc_attr()`
