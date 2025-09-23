@@ -126,5 +126,55 @@
       "lazyLoading": true,
       "preloadImages": false
     }
+  },
+  "site-header": {
+    "type": "static",
+    "phpFunction": "render_site_header",
+    "parameters": [
+      { "name": "siteName", "type": "string", "default": "Design System Site" },
+      { "name": "homeUrl", "type": "string", "default": "/" },
+      { "name": "showNavigation", "type": "boolean", "default": "true" },
+      { "name": "navigationItems", "type": "array", "default": "array()" }
+    ]
+  },
+  "site-footer": {
+    "type": "static",
+    "phpFunction": "render_site_footer",
+    "parameters": [
+      { "name": "siteName", "type": "string", "default": "Design System Site" },
+      { "name": "showCopyright", "type": "boolean", "default": "true" },
+      { "name": "showNavigation", "type": "boolean", "default": "true" },
+      { "name": "navigationItems", "type": "array", "default": "array()" },
+      { "name": "socialLinks", "type": "array", "default": "array()" },
+      { "name": "customText", "type": "string", "default": "Todos los derechos reservados." }
+    ]
+  },
+  "error-404": {
+    "type": "static",
+    "phpFunction": "render_error_404",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "404" },
+      { "name": "subtitle", "type": "string", "default": "Página no encontrada" },
+      { "name": "description", "type": "string", "default": "Lo sentimos, la página que buscas no existe o ha sido movida." },
+      { "name": "homeUrl", "type": "string", "default": "/" },
+      { "name": "homeText", "type": "string", "default": "Volver al inicio" },
+      { "name": "showSearch", "type": "boolean", "default": "true" },
+      { "name": "showSuggestions", "type": "boolean", "default": "true" },
+      { "name": "suggestions", "type": "array", "default": "array()" }
+    ]
+  },
+  "search-results": {
+    "type": "static",
+    "phpFunction": "render_search_results",
+    "parameters": [
+      { "name": "searchTerm", "type": "string", "default": "" },
+      { "name": "totalResults", "type": "number", "default": "0" },
+      { "name": "results", "type": "array", "default": "array()" },
+      { "name": "showNoResults", "type": "boolean", "default": "false" },
+      { "name": "noResultsTitle", "type": "string", "default": "No se encontraron resultados" },
+      { "name": "noResultsMessage", "type": "string", "default": "Intenta con otros términos de búsqueda." },
+      { "name": "showSuggestions", "type": "boolean", "default": "true" },
+      { "name": "suggestions", "type": "array", "default": "array()" }
+    ]
   }
 }

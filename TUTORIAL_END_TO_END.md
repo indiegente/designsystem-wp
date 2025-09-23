@@ -2160,13 +2160,51 @@ Para validación más detallada con sugerencias:
 npm run wp:validate-php
 ```
 
-#### 7.3 Validar tema completo
+#### 7.3 Validación Completa con Reportes Detallados
 
+**Validación Offline (sin WordPress ejecutándose):**
 ```bash
 npm run wp:validate
 ```
 
-#### 7.2 Verificar componente específico
+**Salida con detalles específicos:**
+```
+📊 Validation: structure, security, components
+═══════════════════════════════════════════════
+🎯 Status: ✅ PASS
+⏱️  Duración: 0.01s
+📋 Validators: 3
+✅ Passed: 128
+⚠️  Warnings: 0
+❌ Errors: 0
+
+✅ structure: PASS
+✅ security: PASS (97 tests)
+✅ components: PASS (25 tests)
+```
+
+**Con warnings detallados (cuando hay issues):**
+```
+⚠️ seo: WARN (3 errors, 19 warnings)
+   ❌ Meta description debe estar presente
+   ❌ Title tag faltante
+   ❌ OpenGraph og:title es obligatorio
+   ⚠️  Twitter Card recomendada para compartir
+   ⚠️  JSON-LD structured data recomendado
+   ... y 17 advertencias más
+```
+
+**Validación Live (con WordPress ejecutándose):**
+```bash
+npm run wp:test-urls -- http://localhost:8080
+```
+
+**Solo componentes:**
+```bash
+npm run wp:validate:render
+```
+
+#### 7.4 Verificar componente específico
 
 ```bash
 cat wordpress-output/toulouse-lautrec/components/product-card/product-card.php

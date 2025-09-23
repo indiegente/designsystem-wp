@@ -1,0 +1,29 @@
+/* Main CSS Bundle - Single optimized file for Core Web Vitals */
+
+/* Design Tokens (Variables CSS) */
+@import './tokens/design-tokens.css';
+
+/* Component Styles - All components with proper CSS for optimal performance */
+@import './components/course-card/course-card.css';
+@import './components/error-404/error-404.css';
+@import './components/feature-grid/feature-grid.css';
+@import './components/hero-section/hero-section.css';
+@import './components/interactive-gallery/interactive-gallery.css';
+@import './components/search-results/search-results.css';
+@import './components/site-footer/site-footer.css';
+@import './components/site-header/site-header.css';
+@import './components/test-showcase/test-showcase.css';
+@import './components/testimonials/testimonials.css';
+
+/* Global Styles */
+body {
+  font-family: var(--tl-font-primary);
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--tl-spacing-4);
+}

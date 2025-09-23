@@ -83,8 +83,7 @@ class ComponentGenerator {
     if (customType && customType.generateCode) {
       result = customType.generateCode(component, metadata, dataSource);
     } else if (!metadata) {
-      console.warn(`⚠️ No se encontró metadata para el componente: ${componentName}`);
-      result = this.generateFallbackCode(component, dataSource);
+      throw new Error(`❌ METADATA MISSING: ${componentName} requiere configuración en src/metadata.json. NO usar fallbacks.`);
     } else {
       switch (metadata.type) {
         case 'static':
@@ -373,21 +372,6 @@ class ComponentGenerator {
     return `<?php ${metadata.phpFunction}(${paramsString}); ?>`;
   }
 
-  generateFallbackCode(component) {
-    // FAIL FAST: No generar código fallback silencioso
-    throw new Error(`❌ COMPONENT GENERATION ERROR: ${component.name} requiere configuración específica según su tipo.
-
-🔧 TIPOS SOPORTADOS:
-- static: Solo props, sin dataSource
-- iterative: dataSource con mapping explícito
-- aggregated: dataSource con aggregation configurado
-- comprehensive: dataSource con wordpressData.fields
-
-💡 UBICACIÓN: src/metadata.json → "${component.name}.type"
-📋 EJEMPLO: Cambiar a tipo específico según necesidad
-
-🚨 SIN FALLBACKS GENÉRICOS: Configuración explícita obligatoria para calidad profesional`);
-  }
 
   buildQueryString(query, componentName) {
     // Asegurar post_type basado en el mapeo de metadata
@@ -458,22 +442,25 @@ class ComponentGenerator {
     
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     
-    // Validar sintaxis PHP antes de escribir
+    // Validar sintaxis PHP pero escribir archivo para debug
     const filename = path.basename(outputPath);
-    if (!this.phpValidator.validatePHPContent(phpComponent, filename)) {
-      console.error(`❌ Error de sintaxis PHP en ${componentName}. No se escribió el archivo.`);
+    const isValidPHP = this.phpValidator.validatePHPContent(phpComponent, filename);
+
+    // SIEMPRE escribir archivo para debug
+    fs.writeFileSync(outputPath, phpComponent);
+
+    if (!isValidPHP) {
+      console.error(`❌ Error de sintaxis PHP en ${componentName}. Archivo escrito para debug.`);
       return false;
     }
-    
-    fs.writeFileSync(outputPath, phpComponent);
+
     console.log(`✅ Convertido: ${componentName}`);
   }
 
-  litToPhp(componentName, litContent, fieldTypes = {}) {
+  litToPhp(componentName, litContent) {
     const props = this.extractPropsFromLit(litContent);
-    const cssClasses = this.extractCssClasses(litContent);
 
-    return this.phpTemplate.generate(componentName, props, cssClasses, fieldTypes);
+    return this.phpTemplate.generate(componentName, props);
   }
 
   extractPropsFromLit(litContent) {

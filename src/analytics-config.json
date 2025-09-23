@@ -1,18 +1,82 @@
 {
-  "analytics": {
+  "strategy": "modular",
+  "dataLayer": {
     "enabled": true,
-    "googleAnalytics": {
-      "measurementId": "G-ABC123DEF4",
-      "enabled": true
+    "provider": "native",
+    "events": {
+      "page_view": true,
+      "component_view": true,
+      "interaction": true,
+      "form_submit": true
+    }
+  },
+  "integrations": {
+    "plugins": {
+      "monsterinsights": {
+        "enabled": false,
+        "compatibility_mode": true
+      },
+      "site_kit": {
+        "enabled": false,
+        "compatibility_mode": true
+      }
     },
-    "facebookPixel": {
-      "pixelId": "",
-      "enabled": false
+    "gtm": {
+      "enabled": false,
+      "container_id": "",
+      "data_layer_name": "dataLayer"
     },
-    "customEvents": {
-      "pageViews": true,
-      "componentViews": true,
-      "interactions": true
+    "native": {
+      "enabled": true,
+      "ga4": {
+        "measurement_id": "G-ABC123DEF4",
+        "enabled": true
+      },
+      "facebook_pixel": {
+        "pixel_id": "",
+        "enabled": false
+      }
+    }
+  },
+  "page_templates": {
+    "page-carreras": {
+      "page_view": "page_view_carreras",
+      "events": [
+        {
+          "name": "hero_cta_click",
+          "category": "engagement",
+          "action": "click",
+          "label": "hero_cta_carreras"
+        },
+        {
+          "name": "course_card_click",
+          "category": "engagement",
+          "action": "click",
+          "label": "course_card_view"
+        }
+      ]
+    },
+    "page-contacto": {
+      "page_view": "page_view_contacto",
+      "events": [
+        {
+          "name": "contact_form_submit",
+          "category": "conversion",
+          "action": "submit",
+          "label": "contact_form"
+        }
+      ]
+    },
+    "page-test-showcase": {
+      "page_view": "page_view_test_showcase",
+      "events": [
+        {
+          "name": "test_component_load",
+          "category": "testing",
+          "action": "load",
+          "label": "test_showcase_component"
+        }
+      ]
     }
   }
 }

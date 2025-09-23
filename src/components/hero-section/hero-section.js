@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import './hero-section.css'; // For Storybook individual imports
 
 export class HeroSection extends LitElement {
   static properties = {
@@ -8,78 +9,7 @@ export class HeroSection extends LitElement {
     backgroundImage: { type: String }
   };
 
-  static styles = css`
-    :host {
-      display: block;
-    }
-    .hero {
-      min-height: 60vh;
-      background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-accent-500) 100%);
-      display: flex;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero-bg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      z-index: 1;
-    }
-    .hero-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      z-index: 2;
-    }
-    .hero-content {
-      position: relative;
-      z-index: 3;
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: var(--tl-spacing-8);
-      color: white;
-    }
-    .hero-title {
-      font-size: var(--tl-font-size-3xl);
-      font-weight: var(--tl-font-weight-semibold);
-      margin-bottom: var(--tl-spacing-4);
-      line-height: 1.2;
-    }
-    .hero-subtitle {
-      font-size: var(--tl-font-size-lg);
-      margin-bottom: var(--tl-spacing-6);
-      opacity: 0.9;
-    }
-    .hero-cta {
-      background: var(--tl-accent-500);
-      color: white;
-      padding: var(--tl-spacing-4) var(--tl-spacing-6);
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: var(--tl-font-weight-semibold);
-      transition: var(--tl-transition-normal);
-      display: inline-block;
-    }
-    .hero-cta:hover {
-      transform: translateY(-2px);
-      box-shadow: var(--tl-shadow-lg);
-    }
-    @media (max-width: 768px) {
-      .hero-title {
-        font-size: 2rem;
-      }
-      .hero-content {
-        padding: var(--tl-spacing-4);
-      }
-    }
-  `;
+  static styles = css``;
 
   render() {
     return html`

@@ -31,16 +31,22 @@ npm run setup:composer        # Solo instalar Composer
 npm run setup:phpcs          # Solo instalar PHPCS + WordPress Standards
 ```
 
-### 🧪 **Validación y Calidad**
+### 🧪 **Validación y Calidad con Reportes Detallados**
 ```bash
-npm run wp:validate           # Validación híbrida completa
-npm run wp:validate:render    # Solo validación de renderizado
-npm run wp:test-urls          # Test URLs en WordPress vivo
+npm run wp:validate           # Validación offline con reportes específicos
+npm run wp:validate:render    # Solo validación de componentes
+npm run wp:test-urls          # Test URLs en WordPress vivo con detalles
 npm run wp:lint               # WordPress Coding Standards (PHPCS)
 npm run wp:lint:fix           # Auto-fix PHPCS
 npm run phpcs                 # PHPCS directo
 npm run phpcs:fix             # PHPCBF directo
 ```
+
+**📊 Los comandos de validación ahora muestran detalles específicos:**
+- **Errores específicos**: Meta tags faltantes, problemas de sintaxis
+- **Warnings con contexto**: Recomendaciones SEO, optimizaciones
+- **Contadores claros**: `seo: WARN (3 errors, 19 warnings)`
+- **Límite de detalles**: Primeros 5 errores, primeras 3 warnings
 
 ### 📚 **Desarrollo de Componentes**
 ```bash

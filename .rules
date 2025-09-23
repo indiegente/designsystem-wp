@@ -267,3 +267,82 @@ if (process.env.NODE_ENV !== 'test') {
 	•	✅ OBLIGATORIO sanitizar en acf/update_value antes de guardar.
 	•	✅ OBLIGATORIO documentar en component-metadata.json qué campos ACF usa cada componente.
 	•	❌ PROHIBIDO hardcodear valores de ACF como fallback.
+
+## 🚨 REGLA CRÍTICA: CODIFICACIÓN ROBUSTA Y ESCALABLE
+
+### ❌ PROHIBIDO: CÓDIGO FRÁGIL Y FIXES PUNTUALES
+- **NUNCA** implementar fixes que solo arreglen síntomas específicos
+- **NUNCA** crear soluciones que solo funcionen para casos particulares
+- **NUNCA** usar bandas temporales (flags, hacks) sin solucionar la causa raíz
+- **SIEMPRE** analizar la causa raíz de los problemas
+- **SIEMPRE** implementar soluciones comprehensivas que manejen todos los contextos
+
+### ✅ OBLIGATORIO: ARQUITECTURA ROBUSTA
+- **OBLIGATORIO** implementar sistemas de contexto completos para todas las conversiones
+- **OBLIGATORIO** manejar todos los scopes (variables, loops, parámetros, funciones)
+- **OBLIGATORIO** validar consistencia de variables en todos los contextos
+- **OBLIGATORIO** diseñar sistemas que escalen para casos futuros no previstos
+
+### 📋 VALIDACIONES DE ROBUSTEZ OBLIGATORIAS
+
+#### Para Babel AST Converter:
+- [ ] **OBLIGATORIO**: Sistema de contexto comprehensivo que maneje:
+  - Variables disponibles en cada scope
+  - Contexto de loops (foreach, while, for)
+  - Contexto de funciones y parámetros
+  - Contexto de condicionales anidadas
+- [ ] **OBLIGATORIO**: Validación de variables antes de uso
+- [ ] **OBLIGATORIO**: Mapeo correcto de variables entre contextos (JS → PHP)
+- [ ] **OBLIGATORIO**: Fail-fast si variable no definida en contexto
+
+#### Para Generadores WordPress:
+- [ ] **OBLIGATORIO**: Cada generador debe validar completamente sus inputs
+- [ ] **OBLIGATORIO**: Sistemas de rollback granulares por módulo
+- [ ] **OBLIGATORIO**: Contexto de dependencias entre managers
+- [ ] **OBLIGATORIO**: Validación cruzada entre archivos generados
+
+### 🎯 PRINCIPIOS DE DISEÑO ROBUSTO
+
+1. **CONTEXTO COMPLETO**: Cada sistema debe manejar todos los contextos posibles
+2. **VALIDACIÓN EXHAUSTIVA**: Validar cada variable, parámetro, dependencia
+3. **FAIL-FAST INTELIGENTE**: Fallar temprano con información de contexto
+4. **ESCALABILIDAD INHERENTE**: Diseñar para casos no previstos
+
+### ❌ Ejemplos PROHIBIDOS (FIXES PUNTUALES):
+```javascript
+// ❌ PROHIBIDO - Fix puntual solo para PHP tags
+if (this.inPHPContext) {
+    // Solo arregla síntoma, no causa raíz
+}
+
+// ❌ PROHIBIDO - Hardcodear variables específicas
+if (variableName === 'showSuggestions') {
+    // Solo funciona para este caso específico
+}
+```
+
+### ✅ Ejemplos CORRECTOS (SISTEMAS ROBUSTOS):
+```javascript
+// ✅ CORRECTO - Sistema de contexto comprehensivo
+class ContextTracker {
+    constructor() {
+        this.scopes = [];
+        this.variables = new Map();
+        this.loops = new Map();
+    }
+
+    validateVariable(name, context) {
+        if (!this.isVariableAvailable(name, context)) {
+            throw new Error(`❌ VARIABLE NO DEFINIDA: ${name} en contexto ${context}`);
+        }
+    }
+}
+
+// ✅ CORRECTO - Mapeo completo de contextos
+convertToPhp(node, context) {
+    const phpContext = this.contextMapper.mapContext(node, context);
+    return this.generatePhpWithContext(node, phpContext);
+}
+```
+
+**🎯 OBJETIVO**: Toda codificación debe ser robusta, escalable y manejar contextos completos - sin excepciones ni fixes puntuales.

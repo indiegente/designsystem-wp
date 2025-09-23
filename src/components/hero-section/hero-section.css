@@ -1,0 +1,73 @@
+/* Hero Section Component Styles */
+.hero {
+  min-height: 60vh;
+  background: linear-gradient(135deg, var(--tl-primary-500) 0%, var(--tl-accent-500) 100%);
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 3;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--tl-spacing-4);
+  text-align: center;
+  color: white;
+}
+
+.hero-title {
+  font-family: var(--tl-font-primary);
+  font-size: var(--tl-font-size-3xl);
+  font-weight: var(--tl-font-weight-semibold);
+  margin: 0 0 var(--tl-spacing-4) 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.hero-subtitle {
+  font-family: var(--tl-font-primary);
+  font-size: var(--tl-font-size-lg);
+  margin: 0 0 var(--tl-spacing-8) 0;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.hero-cta {
+  display: inline-block;
+  background: var(--tl-secondary-500);
+  color: var(--tl-neutral-900);
+  padding: var(--tl-spacing-4) var(--tl-spacing-8);
+  border-radius: 8px;
+  text-decoration: none;
+  font-family: var(--tl-font-primary);
+  font-weight: var(--tl-font-weight-semibold);
+  transition: var(--tl-transition-normal);
+  box-shadow: var(--tl-shadow-lg);
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}

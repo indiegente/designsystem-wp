@@ -14,11 +14,90 @@ class FunctionsTemplate {
     const fs = require('fs');
     const path = require('path');
     const metadataPath = path.join(this.config.srcDir, 'metadata.json');
-    
+
     if (fs.existsSync(metadataPath)) {
       return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
     }
     return {};
+  }
+
+  loadSeoConfig() {
+    const fs = require('fs');
+    const path = require('path');
+    const seoConfigPath = path.join(this.config.srcDir, 'seo-config.json');
+
+    if (fs.existsSync(seoConfigPath)) {
+      return JSON.parse(fs.readFileSync(seoConfigPath, 'utf8'));
+    }
+    return {};
+  }
+
+  loadAnalyticsConfig() {
+    const fs = require('fs');
+    const path = require('path');
+    const analyticsConfigPath = path.join(this.config.srcDir, 'analytics-config.json');
+
+    if (fs.existsSync(analyticsConfigPath)) {
+      return JSON.parse(fs.readFileSync(analyticsConfigPath, 'utf8'));
+    }
+    return {};
+  }
+
+  generateSeoConfig() {
+    const seoConfig = this.loadSeoConfig();
+
+    if (Object.keys(seoConfig).length === 0) {
+      return "array(); // No SEO config found";
+    }
+
+    const configEntries = [];
+
+    Object.entries(seoConfig).forEach(([pageKey, pageConfig]) => {
+      if (pageKey === 'default') return; // Skip default config
+
+      const entry = `        '${pageKey}' => array(
+            'title' => '${pageConfig.title || ''}',
+            'description' => '${pageConfig.description || ''}',
+            'keywords' => '${pageConfig.keywords || ''}',
+            'canonical' => '${pageConfig.canonical || ''}',
+            'ogType' => '${pageConfig.ogType || 'website'}',
+            'ogImage' => '${pageConfig.ogImage || ''}',
+            'twitterCard' => '${pageConfig.twitterCard || 'summary'}'
+        )`;
+
+      configEntries.push(entry);
+    });
+
+    return `array(
+${configEntries.join(',\n')}
+    )`;
+  }
+
+  generateAnalyticsConfig() {
+    const analyticsConfig = this.loadAnalyticsConfig();
+
+    if (Object.keys(analyticsConfig).length === 0 || !analyticsConfig.page_templates) {
+      return "array(); // No Analytics config found";
+    }
+
+    const configEntries = [];
+
+    Object.entries(analyticsConfig.page_templates).forEach(([pageKey, pageConfig]) => {
+      const eventsArray = pageConfig.events ? pageConfig.events.map(event =>
+        `array('name' => '${event.name}', 'category' => '${event.category}', 'action' => '${event.action}', 'label' => '${event.label}')`
+      ).join(', ') : '';
+
+      const entry = `        '${pageKey}' => array(
+            'pageView' => '${pageConfig.page_view || ''}',
+            'events' => array(${eventsArray})
+        )`;
+
+      configEntries.push(entry);
+    });
+
+    return `array(
+${configEntries.join(',\n')}
+    )`;
   }
 
   generatePostTypes() {
@@ -83,88 +162,8 @@ function ${this.functionPrefix}_theme_setup() {
 }
 add_action('after_setup_theme', '${this.functionPrefix}_theme_setup');
 
-// Encolar assets (basado en disponibilidad)
-function ${this.functionPrefix}_enqueue_assets() {
-    // Leer manifest de assets disponibles
-    $manifest_file = get_template_directory() . '/assets/available-assets.json';
-    $assets_available = array();
-    
-    if (file_exists($manifest_file)) {
-        $manifest_content = file_get_contents($manifest_file);
-        $assets_available = json_decode($manifest_content, true);
-    }
-    
-    // CSS - Encolar usando nombres reales del manifest con preload
-    if (isset($assets_available['css'])) {
-        foreach ($assets_available['css'] as $asset_key => $filename) {
-            if ($asset_key === 'design-tokens') {
-                wp_enqueue_style('${this.enqueueHandle}-tokens', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
-                // Preload design tokens como critical CSS - SEGURO
-                add_action('wp_head', function() use ($filename) {
-                    echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
-                }, 1);
-            } elseif (strpos($asset_key, '${this.enqueueHandle}') === 0) {
-                wp_enqueue_style('${this.enqueueHandle}-main', get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename);
-                // Preload main CSS como critical - SEGURO
-                add_action('wp_head', function() use ($filename) {
-                    echo '<link rel="preload" href="' . esc_url(get_template_directory_uri() . '/${this.assetPaths.css}/' . $filename) . '" as="style" onload="this.onload=null;this.rel=\\'stylesheet\\'">';
-                }, 1);
-            }
-        }
-    }
-    
-    wp_enqueue_style('${this.enqueueHandle}-style', get_stylesheet_uri());
-    
-    // JavaScript - Encolar solo UNA versión para evitar conflictos
-    if (isset($assets_available['js'])) {
-        $js_loaded = false;
-        
-        // Preferir ES6 sobre UMD para mejor compatibilidad con módulos
-        foreach ($assets_available['js'] as $asset_key => $filename) {
-            if ((strpos($asset_key, '${this.enqueueHandle.split('-')[0]}-ds') === 0 || $asset_key === 'main') && !$js_loaded) {
-                // Preferir versión ES6
-                if (strpos($filename, '.es.js') !== false) {
-                    $js_path = $filename;
-                    $handle = '${this.enqueueHandle}-js-main';
-                    wp_enqueue_script($handle, get_template_directory_uri() . '/assets/js/' . $js_path, array(), '1.0', true);
-                    
-                    // Añadir atributo type="module" para ES6
-                    add_filter('script_loader_tag', function($tag, $handle_filter, $src) use ($handle) {
-                        if ($handle_filter === $handle) {
-                            return str_replace('<script type="text/javascript"', '<script type="module"', $tag);
-                        }
-                        return $tag;
-                    }, 10, 3);
-                    
-                    $js_loaded = true;
-                }
-            }
-        }
-        
-        // Si no encontró ES6, cargar UMD como fallback
-        if (!$js_loaded) {
-            foreach ($assets_available['js'] as $asset_key => $filename) {
-                if ((strpos($asset_key, '${this.enqueueHandle.split('-')[0]}-ds') === 0 || $asset_key === 'main') && !$js_loaded) {
-                    if (strpos($filename, '.umd.js') !== false) {
-                        $js_path = $filename;
-                        $handle = '${this.enqueueHandle}-js-main';
-                        wp_enqueue_script($handle, get_template_directory_uri() . '/assets/js/' . $js_path, array(), '1.0', true);
-                        $js_loaded = true;
-                    }
-                }
-            }
-        }
-    }
-    
-    // Debug info (solo para desarrollo)
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        $build_success = isset($assets_available['buildSuccess']) ? $assets_available['buildSuccess'] : false;
-        if (!$build_success) {
-            echo '<!-- ${this.themeDisplayName}: Assets optimizados no disponibles. Usando estilos inline. -->';
-        }
-    }
-}
-add_action('wp_enqueue_scripts', '${this.functionPrefix}_enqueue_assets');
+// Assets manejados por inc/asset-enqueue.php (usa enqueue_order del manifest)
+// Para evitar duplicados, esta función está deshabilitada
 
 // Auto-incluir todos los componentes
 function ${this.functionPrefix}_load_components() {
@@ -184,11 +183,6 @@ add_action('init', '${this.functionPrefix}_load_components');
 
 // Cargar módulos avanzados
 function ${this.functionPrefix}_load_advanced_modules() {
-    // Cargar sistema de validación y fallbacks
-    $validation_file = get_template_directory() . '/inc/validation.php';
-    if (file_exists($validation_file)) {
-        require_once $validation_file;
-    }
     
     // Cargar sistema SEO integrado con ACF editable (ya incluido en seo-editable-fields.php)
     // El SEO manager ahora está integrado en el sistema de campos editables
@@ -211,12 +205,11 @@ function ${this.functionPrefix}_load_advanced_modules() {
         require_once $seo_editable_file;
     }
 
-    // Cargar sistema de assets optimizados - DESHABILITADO para evitar duplicados
-    // El enqueue de assets se maneja directamente en functions.php
-    // $assets_file = get_template_directory() . '/inc/asset-enqueue.php';
-    // if (file_exists($assets_file)) {
-    //     require_once $assets_file;
-    // }
+    // Cargar sistema de assets optimizados (usa enqueue_order del manifest)
+    $assets_file = get_template_directory() . '/inc/asset-enqueue.php';
+    if (file_exists($assets_file)) {
+        require_once $assets_file;
+    }
 }
 add_action('init', '${this.functionPrefix}_load_advanced_modules');
 
@@ -226,71 +219,79 @@ ${this.generatePostTypes()}
 }
 add_action('init', '${this.functionPrefix}_register_post_types');
 
-// SEO y Analytics por plantilla
-function ${this.functionPrefix}_page_seo_analytics() {
+// SEO por plantilla (generado desde seo-config.json)
+function ${this.functionPrefix}_page_seo() {
     if (!is_page()) return;
-    
+
     $page_template = get_page_template_slug();
-    $page_id = get_queried_object_id();
-    
-    // Configuración de SEO y Analytics por plantilla
-    $seo_config = array(
-        'page-carreras' => array(
-            'title' => 'Carreras Técnicas | Toulouse Lautrec',
-            'description' => 'Explora nuestras carreras técnicas y programas especializados en diseño, tecnología y creatividad.',
-            'keywords' => 'carreras técnicas, diseño, tecnología, creatividad, Toulouse Lautrec',
-            'canonical' => '/carreras',
-            'analytics' => array(
-                'pageView' => 'page_view_carreras',
-                'events' => array(
-                    array('name' => 'hero_cta_click', 'category' => 'engagement', 'action' => 'click', 'label' => 'hero_cta_carreras'),
-                    array('name' => 'course_card_click', 'category' => 'engagement', 'action' => 'click', 'label' => 'course_card_view')
-                )
-            )
-        ),
-        'page-contacto' => array(
-            'title' => 'Contacto | Toulouse Lautrec',
-            'description' => 'Ponte en contacto con nosotros. Estamos aquí para ayudarte en tu camino creativo.',
-            'keywords' => 'contacto, Toulouse Lautrec, información, ayuda',
-            'canonical' => '/contacto',
-            'analytics' => array(
-                'pageView' => 'page_view_contacto',
-                'events' => array(
-                    array('name' => 'contact_form_submit', 'category' => 'conversion', 'action' => 'submit', 'label' => 'contact_form')
-                )
-            )
-        )
-    );
-    
+
+    // Configuración de SEO generada desde seo-config.json
+    $seo_config = ${this.generateSeoConfig()};
+
     if (isset($seo_config[$page_template])) {
         $config = $seo_config[$page_template];
-        
+
         // Meta tags
         echo '<title>' . esc_html($config['title']) . '</title>';
         echo '<meta name="description" content="' . esc_attr($config['description']) . '">';
         echo '<meta name="keywords" content="' . esc_attr($config['keywords']) . '">';
-        
+
         // Open Graph
         echo '<meta property="og:title" content="' . esc_attr($config['title']) . '">';
         echo '<meta property="og:description" content="' . esc_attr($config['description']) . '">';
-        echo '<meta property="og:type" content="website">';
+        echo '<meta property="og:type" content="' . esc_attr($config['ogType']) . '">';
         echo '<meta property="og:url" content="' . esc_url(home_url($config['canonical'])) . '">';
-        
+
+        if (!empty($config['ogImage'])) {
+            echo '<meta property="og:image" content="' . esc_url($config['ogImage']) . '">';
+        }
+
+        // Twitter Card
+        echo '<meta name="twitter:card" content="' . esc_attr($config['twitterCard']) . '">';
+
         // Canonical
         echo '<link rel="canonical" href="' . esc_url(home_url($config['canonical'])) . '">';
-        
-        // Analytics - JavaScript code con NONCE de seguridad
+    }
+}
+add_action('wp_head', '${this.functionPrefix}_page_seo');
+
+// Analytics modular (generado desde analytics-config.json)
+function ${this.functionPrefix}_page_analytics() {
+    if (!is_page()) return;
+
+    $page_template = get_page_template_slug();
+
+    // Configuración de Analytics generada desde analytics-config.json
+    $analytics_config = ${this.generateAnalyticsConfig()};
+
+    if (isset($analytics_config[$page_template])) {
+        $config = $analytics_config[$page_template];
+
+        // Data Layer básico - Enfoque modular
         $nonce = wp_create_nonce('${this.functionPrefix}_analytics_nonce');
-        wp_add_inline_script('${this.enqueueHandle}-js-main', '
+        wp_add_inline_script('${this.enqueueHandle}-${this.enqueueHandle}-ds-umd', '
+            // Data Layer modular - Compatible con plugins, GTM y nativo
+            window.dataLayer = window.dataLayer || [];
+
+            // Page view event
+            dataLayer.push({
+                "event": "' . esc_js($config['pageView']) . '",
+                "page_template": "' . esc_js($page_template) . '",
+                "theme_version": "1.0.0",
+                "nonce": "' . esc_js($nonce) . '"
+            });
+
+            // Custom events setup (compatible con GTM/plugins)
             document.addEventListener("DOMContentLoaded", function() {
-                // Código de analytics seguro con nonce: ' . $nonce . '
-                // Add your analytics tracking code here
-                // Example: gtag("event", "page_view", { event_category: "engagement" });
+                // Analytics events disponibles para extensiones
+                if (typeof ${this.functionPrefix}_analytics_ready === "function") {
+                    ${this.functionPrefix}_analytics_ready();
+                }
             });
         ');
     }
 }
-add_action('wp_head', '${this.functionPrefix}_page_seo_analytics');
+add_action('wp_head', '${this.functionPrefix}_page_analytics');
 ?>`;
   }
 }

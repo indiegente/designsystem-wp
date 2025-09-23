@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const ConfigSingleton = require('../core/config-singleton');
 
 /**
  * Analytics Manager - Gestión de tracking y medición
@@ -19,12 +20,31 @@ class AnalyticsManager {
    */
   loadAnalyticsConfig() {
     const configPath = path.join(this.config.srcDir, 'analytics-config.json');
-    
+
     if (fs.existsSync(configPath)) {
       const configData = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      return configData.analytics || {};
+
+      // Mapear nueva estructura a la esperada por el manager
+      const mappedConfig = {
+        enabled: configData.integrations?.native?.enabled || false,
+        googleAnalytics: {
+          enabled: configData.integrations?.native?.ga4?.enabled || false,
+          measurementId: configData.integrations?.native?.ga4?.measurement_id || ''
+        },
+        facebookPixel: {
+          enabled: configData.integrations?.native?.facebook_pixel?.enabled || false,
+          pixelId: configData.integrations?.native?.facebook_pixel?.pixel_id || ''
+        },
+        customEvents: {
+          pageViews: configData.dataLayer?.events?.page_view || false,
+          componentViews: configData.dataLayer?.events?.component_view || false,
+          interactions: configData.dataLayer?.events?.interaction || false
+        }
+      };
+
+      return mappedConfig;
     }
-    
+
     return this.config.analytics || {
       enabled: false,
       googleAnalytics: { enabled: false },
@@ -84,7 +104,6 @@ class AnalyticsManager {
    */
   generateAnalyticsConfigFile() {
     // DEBUG: Mostrar qué configuración estamos recibiendo
-    console.log('🔍 DEBUG Analytics Config:', JSON.stringify(this.analyticsConfig, null, 2));
     
     if (!this.analyticsConfig.enabled) {
       throw new Error('❌ ANALYTICS DESHABILITADO: config.js → analytics.enabled debe ser true\n💡 Ubicación: scripts/wp-generator/core/config.js línea 78\n💡 Configuración recibida: ' + JSON.stringify(this.analyticsConfig));
@@ -119,13 +138,17 @@ class AnalyticsManager {
    * Genera el código PHP completo de analytics
    */
   generateAnalyticsPhp() {
+    const config = ConfigSingleton.getInstance();
+    const themeHandle = config.getThemeHandle();
+    const themeNamespace = config.getThemeNamespace();
+
     return `<?php
 /**
  * Analytics Manager - Generado automáticamente
  * Gestión de GA4, eventos personalizados y data layer
  */
 
-class ToulouseAnalyticsManager {
+class ThemeAnalyticsManager {
     private $analytics_config;
     private $current_template;
     private $current_components;
@@ -264,7 +287,7 @@ class ToulouseAnalyticsManager {
             return '';
         }
         
-        $script = '<script type="text/javascript" id="toulouse-analytics-events">';
+        $script = '<script type="text/javascript" id="${themeHandle}-analytics-events">';
         $script .= 'document.addEventListener("DOMContentLoaded", function() {';
         
         foreach ($events as $event) {
@@ -287,7 +310,7 @@ class ToulouseAnalyticsManager {
                     $script .= '"page_title": "' . esc_js($event['page_title']) . '",';
                 }
                 
-                $script .= '"custom_parameter": "toulouse_design_system"';
+                $script .= '"custom_parameter": "${themeNamespace}"';
                 $script .= '});';
                 $script .= '}';
             }
@@ -325,50 +348,50 @@ class ToulouseAnalyticsManager {
 }
 
 // Inicializar Analytics Manager lazy
-function get_toulouse_analytics() {
-    static $toulouse_analytics = null;
-    
-    if ($toulouse_analytics === null) {
+function get_theme_analytics() {
+    static $theme_analytics = null;
+
+    if ($theme_analytics === null) {
         try {
-            $toulouse_analytics = new ToulouseAnalyticsManager();
+            $theme_analytics = new ThemeAnalyticsManager();
         } catch (Exception $e) {
-            error_log('Error inicializando ToulouseAnalyticsManager: ' . $e->getMessage());
-            $toulouse_analytics = false;
+            error_log('Error inicializando ThemeAnalyticsManager: ' . $e->getMessage());
+            $theme_analytics = false;
         } catch (Error $e) {
-            error_log('Error fatal en ToulouseAnalyticsManager: ' . $e->getMessage());
-            $toulouse_analytics = false;
+            error_log('Error fatal en ThemeAnalyticsManager: ' . $e->getMessage());
+            $theme_analytics = false;
         }
     }
-    
-    return $toulouse_analytics;
+
+    return $theme_analytics;
 }
 
 // Hook para GA4 en wp_head
-function toulouse_analytics_ga4() {
-    $toulouse_analytics = get_toulouse_analytics();
-    if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateGA4Script')) {
-        echo $toulouse_analytics->generateGA4Script();
+function theme_analytics_ga4() {
+    $theme_analytics = get_theme_analytics();
+    if ($theme_analytics && method_exists($theme_analytics, 'generateGA4Script')) {
+        echo $theme_analytics->generateGA4Script();
     }
 }
-add_action('wp_head', 'toulouse_analytics_ga4');
+add_action('wp_head', 'theme_analytics_ga4');
 
 // Hook para data layer en wp_head
-function toulouse_analytics_data_layer() {
-    $toulouse_analytics = get_toulouse_analytics();
-    if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateDataLayer')) {
-        echo $toulouse_analytics->generateDataLayer();
+function theme_analytics_data_layer() {
+    $theme_analytics = get_theme_analytics();
+    if ($theme_analytics && method_exists($theme_analytics, 'generateDataLayer')) {
+        echo $theme_analytics->generateDataLayer();
     }
 }
-add_action('wp_head', 'toulouse_analytics_data_layer');
+add_action('wp_head', 'theme_analytics_data_layer');
 
 // Hook para eventos personalizados en wp_footer
-function toulouse_analytics_events() {
-    $toulouse_analytics = get_toulouse_analytics();
-    if ($toulouse_analytics && method_exists($toulouse_analytics, 'generateCustomEvents')) {
-        echo $toulouse_analytics->generateCustomEvents();
+function theme_analytics_events() {
+    $theme_analytics = get_theme_analytics();
+    if ($theme_analytics && method_exists($theme_analytics, 'generateCustomEvents')) {
+        echo $theme_analytics->generateCustomEvents();
     }
 }
-add_action('wp_footer', 'toulouse_analytics_events');
+add_action('wp_footer', 'theme_analytics_events');
 ?>`;
   }
 }

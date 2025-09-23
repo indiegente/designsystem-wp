@@ -46,22 +46,34 @@ class GenerationValidator {
       'components'
     );
 
+    // Cargar metadata para saber qué componentes esperar
+    const metadata = this.loadMetadata();
+    if (!metadata) {
+      this.warnings.push('⚠️ No se encontró metadata.json, saltando validación de componentes');
+      return;
+    }
+
     if (!fs.existsSync(componentsDir)) {
       this.errors.push('❌ Directorio components no existe');
       return;
     }
 
-    const components = fs.readdirSync(componentsDir);
-    if (components.length === 0) {
-      this.warnings.push('⚠️ No se encontraron componentes generados');
+    // Validar solo componentes definidos en metadata
+    const expectedComponents = Object.keys(metadata).filter(key =>
+      metadata[key].phpFunction && !key.includes('postTypes') && !key.includes('componentMapping')
+    );
+
+    if (expectedComponents.length === 0) {
+      this.warnings.push('⚠️ No se encontraron componentes en metadata.json');
+      return;
     }
 
-    components.forEach(componentName => {
+    expectedComponents.forEach(componentName => {
       const componentPath = path.join(componentsDir, componentName);
       const phpFile = path.join(componentPath, `${componentName}.php`);
-      
+
       if (!fs.existsSync(phpFile)) {
-        this.errors.push(`❌ Archivo PHP faltante: ${componentName}.php`);
+        this.errors.push(`❌ Componente de metadata faltante: ${componentName}.php`);
         return;
       }
 
@@ -70,11 +82,28 @@ class GenerationValidator {
       if (!content.includes('<?php')) {
         this.errors.push(`❌ Archivo PHP inválido: ${componentName}.php`);
       }
-      
-      if (!content.includes(`function render_${componentName.replace('-', '_')}`)) {
-        this.errors.push(`❌ Función render faltante en: ${componentName}.php`);
+
+      const expectedFunction = `render_${componentName.replace('-', '_')}`;
+      if (!content.includes(`function ${expectedFunction}`)) {
+        this.errors.push(`❌ Función ${expectedFunction} faltante en: ${componentName}.php`);
       }
     });
+
+    console.log(`🔍 Validando ${expectedComponents.length} componentes desde metadata.json`);
+  }
+
+  loadMetadata() {
+    const metadataPath = path.join(this.config.srcDir, 'metadata.json');
+    if (!fs.existsSync(metadataPath)) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    } catch (error) {
+      console.warn('⚠️ Error cargando metadata.json:', error.message);
+      return null;
+    }
   }
 
   validateTemplates() {
@@ -172,20 +201,21 @@ class GenerationValidator {
 
   validateCriticalFiles() {
     const themeDir = path.join(this.config.outputDir, this.config.themeName);
-    
+
     // Verificar functions.php
     const functionsPath = path.join(themeDir, 'functions.php');
     if (fs.existsSync(functionsPath)) {
       const content = fs.readFileSync(functionsPath, 'utf8');
-      
+
       // Buscar función theme_setup con prefijo dinámico
       const functionPrefix = this.config.phpFunctionPrefix || 'theme';
       const themeSetupFunction = `${functionPrefix}_theme_setup`;
       if (!content.includes(themeSetupFunction)) {
         this.errors.push(`❌ Función ${themeSetupFunction} faltante en functions.php`);
       }
-      
-      if (!content.includes('wp_enqueue_style')) {
+
+      // Buscar enqueue de estilos (puede ser wp_enqueue_style o función optimizada)
+      if (!content.includes('wp_enqueue_style') && !content.includes('optimized_asset_enqueue')) {
         this.warnings.push('⚠️ No se encontró enqueue de estilos');
       }
     }

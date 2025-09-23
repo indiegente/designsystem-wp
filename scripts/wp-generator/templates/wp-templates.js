@@ -52,45 +52,23 @@ get_header();
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
 
-<header class="site-header">
-    <div class="container">
-        <h1 class="site-title">
-            <a href="<?php echo esc_url(home_url('/')); ?>"><?php bloginfo('name'); ?></a>
-        </h1>
-        
-        <nav class="main-navigation">
-            <?php
-            wp_nav_menu(array(
-                'theme_location' => 'primary',
-                'container' => false,
-                'menu_class' => 'nav-menu'
-            ));
-            ?>
-        </nav>
-    </div>
-</header>`;
+<?php
+// Include and render site-header component
+require_once get_template_directory() . '/components/site-header/site-header.php';
+render_site_header();
+?>`;
   }
 
   generateFooterTemplate() {
-    return `<footer class="site-footer">
-    <div class="container">
-        <p>&copy; <?php echo date('Y'); ?> <?php bloginfo('name'); ?>. Todos los derechos reservados.</p>
-        
-        <nav class="footer-navigation">
-            <?php
-            wp_nav_menu(array(
-                'theme_location' => 'footer',
-                'container' => false,
-                'menu_class' => 'footer-menu'
-            ));
-            ?>
-        </nav>
-    </div>
-</footer>
+    return `<?php
+// Include and render site-footer component
+require_once get_template_directory() . '/components/site-footer/site-footer.php';
+render_site_footer();
+?>
 
 <?php wp_footer(); ?>
 </body>
-</html>`;
+</html>`;;
   }
 
   generateFrontPageTemplate() {
@@ -118,54 +96,25 @@ ${componentIncludes}
   generateErrorTemplate() {
     return `<?php
 get_header();
-?>
 
-<main class="error-404-content">
-    <div class="container">
-        <h1>404 - Página no encontrada</h1>
-        <p>Lo sentimos, la página que buscas no existe.</p>
-        
-        <div class="search-form">
-            <?php get_search_form(); ?>
-        </div>
-        
-        <a href="<?php echo esc_url(home_url('/')); ?>" class="btn-home">
-            Volver al inicio
-        </a>
-    </div>
-</main>
+// Include and render error-404 component
+require_once get_template_directory() . '/components/error-404/error-404.php';
+render_error_404();
 
-<?php get_footer(); ?>`;
+get_footer();
+?>`;;
   }
 
   generateSearchTemplate() {
     return `<?php
 get_header();
-?>
 
-<main class="search-results">
-    <div class="container">
-        <h1>Resultados de búsqueda para: "<?php the_search_query(); ?>"</h1>
-        
-        <?php if (have_posts()) : ?>
-            <div class="search-results-list">
-                <?php while (have_posts()) : the_post(); ?>
-                    <article class="search-result-item">
-                        <h2><a href="<?php the_permalink(); ?>"><?php the_title(); ?></a></h2>
-                        <div class="excerpt"><?php the_excerpt(); ?></div>
-                    </article>
-                <?php endwhile; ?>
-            </div>
-            
-            <?php the_posts_pagination(); ?>
-        <?php else : ?>
-            <p>No se encontraron resultados para tu búsqueda.</p>
-            <?php get_search_form(); ?>
-        <?php endif; ?>
-    </div>
-</main>
+// Include and render search-results component
+require_once get_template_directory() . '/components/search-results/search-results.php';
+render_search_results();
 
-<?php get_footer(); ?>`;
+get_footer();
+?>`;;
   }
 
   generate(templateName) {

@@ -110,13 +110,11 @@ class ACFManager {
    * Construye grupos de campos ACF desde configuración
    */
   buildFieldGroups() {
-    console.log('🔍 DEBUG ACF: Iniciando buildFieldGroups...');
     console.log('   pageTemplates:', Object.keys(this.pageTemplates));
     const groups = {};
 
     try {
       // 1. Analizar componentes comprehensive en páginas
-      console.log('🔍 DEBUG ACF: Paso 1 - Buscando comprehensive...');
       for (const [pageName, pageConfig] of Object.entries(this.pageTemplates)) {
         const components = pageConfig.components || [];
         console.log(`   Página ${pageName}: ${components.length} componentes`);
@@ -141,7 +139,6 @@ class ACFManager {
     }
 
     // 2. Analizar componentes aggregated que usen custom post types con ACF
-    console.log('🔍 DEBUG ACF: Buscando componentes aggregated...');
     for (const [pageName, pageConfig] of Object.entries(this.pageTemplates)) {
       console.log(`   Página ${pageName}:`, pageConfig.components?.map(c => c.name));
       const components = pageConfig.components || [];
@@ -156,7 +153,6 @@ class ACFManager {
         if (!fieldsData) continue;
 
         // DEBUG: Ver qué campos encuentra
-        console.log(`🔍 DEBUG ACF: Componente ${component.name}:`);
         console.log('   fieldsData:', JSON.stringify(fieldsData, null, 2));
 
         // Verificar si tiene campos ACF
@@ -185,7 +181,6 @@ class ACFManager {
       console.error('   Stack:', error.stack);
     }
 
-    console.log('🔍 DEBUG ACF: Finalizando buildFieldGroups');
     console.log('   Total grupos generados:', Object.keys(groups).length);
     return groups;
   }

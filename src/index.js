@@ -1,5 +1,5 @@
 // Design System Entry Point
-import './tokens/design-tokens.css';
+import './main.css'; // Single optimized CSS bundle for WordPress production
 
 // Importar todos los componentes
 import './components/hero-section/hero-section.js';
