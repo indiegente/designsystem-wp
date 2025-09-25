@@ -2,14 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const WpTemplates = require('../templates/wp-templates');
 const FunctionsTemplate = require('../templates/functions-template');
-const PHPValidator = require('../validation/php-validator');
+const PHPValidator = require('../../validation/validators/php-validator');
 
 class TemplateBuilder {
   constructor(config) {
     this.config = config;
     this.wpTemplates = new WpTemplates(config);
     this.functionsTemplate = new FunctionsTemplate(config);
-    this.phpValidator = new PHPValidator(config);
+    // PHPValidator modernizado - usar método estático
     this.metadata = this.loadMetadata();
   }
 
@@ -28,8 +28,8 @@ class TemplateBuilder {
     const filename = path.basename(filePath);
     
     try {
-      // Validar contenido antes de escribir
-      if (!this.phpValidator.validatePHPContent(content, filename)) {
+      // Validar contenido usando método estático modernizado
+      if (!PHPValidator.validateContent(content, filename)) {
         console.error(`❌ Error de sintaxis PHP en ${filename}. No se escribió el archivo.`);
         return false;
       }

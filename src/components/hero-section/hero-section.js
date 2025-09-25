@@ -1,5 +1,6 @@
-import { LitElement, html, css } from 'lit';
-import './hero-section.css'; // For Storybook individual imports
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './hero-section.css'; // For global Storybook/WordPress styles
+import componentStyles from './hero-section.css?inline'; // For Shadow DOM
 
 export class HeroSection extends LitElement {
   static properties = {
@@ -9,7 +10,8 @@ export class HeroSection extends LitElement {
     backgroundImage: { type: String }
   };
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   render() {
     return html`

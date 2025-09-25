@@ -4,11 +4,13 @@ const ComponentGenerator = require('./managers/component-generator');
 const TemplateBuilder = require('./managers/template-builder');
 const AssetManager = require('./managers/asset-manager');
 const ThemeStructure = require('./managers/theme-structure');
-const GenerationValidator = require('./validation/validator');
 const AnalyticsManager = require('./managers/analytics-manager');
 const ACFManager = require('./managers/acf-manager');
 const SEOEditableManager = require('./managers/seo-editable-manager');
-const PHPValidator = require('./validation/php-validator');
+// 🚀 Validators migrados al nuevo sistema moderno
+const { ValidationEngine } = require('../validation/core/validation-engine');
+const StructureValidator = require('../validation/validators/structure-validator');
+const PHPValidator = require('../validation/validators/php-validator');
 const ConfigSingleton = require('./core/config-singleton');
 
 class WordPressGenerator {
@@ -29,10 +31,58 @@ class WordPressGenerator {
     this.componentGenerator = new ComponentGenerator(this.config);
     this.templateBuilder = new TemplateBuilder(this.config);
     this.assetManager = new AssetManager(this.config);
-    this.validator = new GenerationValidator(this.config);
+    // 🚀 Modernized validation system
+    this.validationEngine = this.createValidationEngine();
     this.acfManager = new ACFManager(this.config);
     this.seoEditableManager = new SEOEditableManager(this.config);
-    this.phpValidator = new PHPValidator(this.config);
+  }
+
+  /**
+   * 🚀 Crear validation engine modernizado (simplificado)
+   */
+  createValidationEngine() {
+    return ValidationEngine.builder()
+      .validator('structure', new StructureValidator())
+      .validator('php', new PHPValidator())
+      .build();
+  }
+
+  /**
+   * 🚨 PRE-VALIDACIÓN CRÍTICA: Validar metadata ANTES de generar archivos
+   * Implementa fail-fast según .rules
+   */
+  async preValidateConfiguration() {
+    // Import MetadataValidator solo para pre-validación
+    const MetadataValidator = require('../validation/validators/metadata-validator');
+
+    const metadataValidator = new MetadataValidator();
+
+    try {
+      // 🎯 SINGLE SOURCE OF TRUTH: Usar ConfigSingleton directamente
+      await metadataValidator.validate({}, {});
+
+      // Verificar resultados
+      if (metadataValidator.errors.length > 0) {
+        console.log('❌ ERRORES CRÍTICOS EN METADATA:');
+        metadataValidator.errors.forEach((error, index) => {
+          console.log(`   ${index + 1}. ${error.message}`);
+          if (error.metadata && error.metadata.fix) {
+            console.log(`      💡 Fix: ${error.metadata.fix}`);
+          }
+        });
+        throw new Error(`❌ METADATA INVÁLIDA: ${metadataValidator.errors.length} errores críticos encontrados. MUST FIX BEFORE GENERATION.`);
+      }
+
+      if (metadataValidator.warnings.length > 0) {
+        console.log(`⚠️ ${metadataValidator.warnings.length} advertencias en metadata (no críticas)`);
+      }
+
+      console.log('✅ Pre-validación de metadata completada');
+
+    } catch (error) {
+      console.log('❌ ERROR EN PRE-VALIDACIÓN:', error.message);
+      throw error; // Re-throw para fail-fast
+    }
   }
 
   cleanOutputDirectory() {
@@ -61,7 +111,7 @@ class WordPressGenerator {
 
   async generate() {
     console.log('🚀 Iniciando generación de tema WordPress avanzado...');
-    
+
     // 0. Validar Node.js version (FAIL FAST)
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
@@ -72,6 +122,10 @@ class WordPressGenerator {
       console.log(`⚠️ ADVERTENCIA: Node.js ${nodeVersion} detectado. Recomendado: Node.js 24+`);
       console.log('💡 Para óptimo rendimiento: nvm use 24');
     }
+
+    // 🚨 0.1. PRE-VALIDACIÓN CRÍTICA: Validar metadata ANTES de generar archivos
+    console.log('🔍 Pre-validando metadata y configuración...');
+    await this.preValidateConfiguration();
     
     let generationStarted = false;
     
@@ -122,89 +176,65 @@ class WordPressGenerator {
         console.log('⚠️ SEO Editable: Error generando campos editables:', error.message);
       }
 
-      
-      // 7. Validar generación final
-      const finalValidation = await this.validator.validateGeneration();
-      
-      // 8. Validar sintaxis PHP de todos los archivos generados
-      console.log('🔍 Validando sintaxis PHP...');
-      const phpValidation = this.phpValidator.validateWordPressTheme();
-      this.phpValidator.printValidationReport();
-      
-      if (phpValidation) {
-        console.log('✅ Sintaxis PHP validada correctamente');
-      } else {
-        console.log('❌ Errores de sintaxis PHP detectados');
-        this.phpValidator.saveValidationReport();
-        // Si hay errores PHP restantes, hacer rollback
-        return this.handleGenerationFailure('Error de sintaxis PHP encontrado');
-      }
-      
-      const allValidationsPass = finalValidation && phpValidation;
-      
-      if (allValidationsPass) {
-        console.log('✅ Generación básica completada. Ejecutando validaciones de calidad...');
-        
-        
-        // 9. Ejecutar PHPCS auto-fix para WordPress Coding Standards (opcional)
-        if (!process.env.SKIP_PHPCS) {
-          try {
-            console.log('🔧 Aplicando WordPress Coding Standards (PHPCS)...');
-            const phpcsSuccess = await this.runPHPCSAutoFix();
-            
-            if (!phpcsSuccess) {
-              console.log('⚠️ PHPCS no completado exitosamente');
-            }
-          } catch (error) {
-            console.error('❌ PHPCS FALLÓ:', error.message);
-          }
-        } else {
-          console.log('⏭️ PHPCS saltado (SKIP_PHPCS=true)');
-        }
-        
-        try {
-          // 10. Ejecutar validación híbrida final (opcional)
-          console.log('🎯 Ejecutando validación híbrida completa...');
-          const hybridSuccess = await this.runHybridValidation();
+      // 🚀 7. NO HAY VALIDACIÓN POST-GENERACIÓN - FAIL-FAST DURANTE GENERACIÓN
+      console.log('✅ Generación completada. Todas las validaciones ocurrieron durante el proceso.');
 
-          if (!hybridSuccess) {
-            console.log('⚠️ Validaciones híbridas opcionales fallaron (tema funcional generado)');
+      // 9. Ejecutar PHPCS auto-fix para WordPress Coding Standards (opcional)
+      if (!process.env.SKIP_PHPCS) {
+        try {
+          console.log('🔧 Aplicando WordPress Coding Standards (PHPCS)...');
+          const phpcsSuccess = await this.runPHPCSAutoFix();
+
+          if (!phpcsSuccess) {
+            console.log('⚠️ PHPCS no completado exitosamente');
           }
         } catch (error) {
-          console.log('⚠️ VALIDACIONES HÍBRIDAS OPCIONALES:', error.message);
+          console.error('❌ PHPCS FALLÓ:', error.message);
         }
-
-        try {
-          // 11. Ejecutar validación de renderizado de componentes (opcional)
-          console.log('🧩 Ejecutando validación de renderizado de componentes...');
-          const renderValidationSuccess = await this.runComponentRenderValidation();
-
-          if (!renderValidationSuccess) {
-            console.log('⚠️ Validaciones de renderizado opcionales fallaron (tema funcional generado)');
-          }
-        } catch (error) {
-          console.log('⚠️ VALIDACIONES DE RENDERIZADO OPCIONALES:', error.message);
-        }
-        
-        // Siempre reportar éxito si la generación básica pasó
-        console.log('✅ Tema WordPress completo generado exitosamente!');
-        console.log('🎯 Características incluidas:');
-        console.log('   - ✅ Templates dinámicos desde página-templates.json');
-        console.log('   - ✅ Componentes PHP desde Lit automáticamente');
-        console.log('   - ✅ CSS separados por componente (sin inline styles)');
-        console.log('   - ✅ Enqueue de assets optimizados por Vite');
-        console.log('   - ✅ WordPress Coding Standards aplicados');
-        console.log('   - ✅ Escape de datos y seguridad');
-        console.log('   - ✅ Soporte ACF con campos automáticos');
-        console.log('   - ✅ Sistema SEO editable completo');
-        console.log('   - ✅ Analytics GA4 + Facebook Pixel');
-        console.log('   - ✅ Generación dinámica desde componentes Lit');
-        console.log('\n🚀 Tema listo para uso en WordPress');
       } else {
-        return this.handleGenerationFailure('Validación de calidad falló');
+        console.log('⏭️ PHPCS saltado (SKIP_PHPCS=true)');
       }
-      
-      return allValidationsPass;
+
+      try {
+        // 10. Ejecutar validación híbrida final (opcional)
+        console.log('🎯 Ejecutando validación híbrida completa...');
+        const hybridSuccess = await this.runHybridValidation();
+
+        if (!hybridSuccess) {
+          console.log('⚠️ Validaciones híbridas opcionales fallaron (tema funcional generado)');
+        }
+      } catch (error) {
+        console.log('⚠️ VALIDACIONES HÍBRIDAS OPCIONALES:', error.message);
+      }
+
+      try {
+        // 11. Ejecutar validación de renderizado de componentes (opcional)
+        console.log('🧩 Ejecutando validación de renderizado de componentes...');
+        const renderValidationSuccess = await this.runComponentRenderValidation();
+
+        if (!renderValidationSuccess) {
+          console.log('⚠️ Validaciones de renderizado opcionales fallaron (tema funcional generado)');
+        }
+      } catch (error) {
+        console.log('⚠️ VALIDACIONES DE RENDERIZADO OPCIONALES:', error.message);
+      }
+
+      // Siempre reportar éxito si la generación básica pasó
+      console.log('✅ Tema WordPress completo generado exitosamente!');
+      console.log('🎯 Características incluidas:');
+      console.log('   - ✅ Templates dinámicos desde página-templates.json');
+      console.log('   - ✅ Componentes PHP desde Lit automáticamente');
+      console.log('   - ✅ CSS separados por componente (sin inline styles)');
+      console.log('   - ✅ Enqueue de assets optimizados por Vite');
+      console.log('   - ✅ WordPress Coding Standards aplicados');
+      console.log('   - ✅ Escape de datos y seguridad');
+      console.log('   - ✅ Soporte ACF con campos automáticos');
+      console.log('   - ✅ Sistema SEO editable completo');
+      console.log('   - ✅ Analytics GA4 + Facebook Pixel');
+      console.log('   - ✅ Generación dinámica desde componentes Lit');
+      console.log('\n🚀 Tema listo para uso en WordPress');
+
+      return true;
       
     } catch (error) {
       console.error('❌ Error crítico durante la generación:', error.message);

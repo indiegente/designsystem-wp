@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './test-showcase.css'; // For global Storybook/WordPress styles
+import componentStyles from './test-showcase.css?inline'; // For Shadow DOM
 
 /**
  * Componente de prueba completo para validar todos los managers
@@ -13,8 +15,9 @@ export class TestShowcase extends LitElement {
     };
   }
 
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
   static get styles() {
-    return css``;
+    return css`${unsafeCSS(componentStyles)}`;
   }
 
   constructor() {

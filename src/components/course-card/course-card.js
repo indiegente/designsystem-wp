@@ -1,5 +1,6 @@
-import { LitElement, html, css } from 'lit';
-import './course-card.css'; // For Storybook individual imports
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './course-card.css'; // For global Storybook/WordPress styles
+import componentStyles from './course-card.css?inline'; // For Shadow DOM
 
 export class CourseCard extends LitElement {
   static properties = {
@@ -19,7 +20,8 @@ export class CourseCard extends LitElement {
     this.linkText = 'Ver más';
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   render() {
     return html`

@@ -2,15 +2,21 @@ const fs = require('fs');
 const path = require('path');
 const ExtensionManager = require('../extensions/extension-manager');
 const PhpComponentTemplate = require('../templates/php-components');
-const PHPValidator = require('../validation/php-validator');
+const PHPValidator = require('../../validation/validators/php-validator');
 
 class ComponentGenerator {
   constructor(config) {
     this.config = config;
-    this.metadata = this.loadComponentMetadata();
+
+    // 🎯 SINGLE SOURCE OF TRUTH: Usar ConfigSingleton
+    const ConfigSingleton = require('../core/config-singleton');
+    const configSingleton = ConfigSingleton.getInstance();
+
+    this.metadata = configSingleton.getMetadata();
+    this.pageTemplates = configSingleton.getPageTemplates();
     this.extensionManager = new ExtensionManager(config);
     this.phpTemplate = new PhpComponentTemplate(config);
-    this.phpValidator = new PHPValidator(config);
+    // PHPValidator modernizado - usar método estático para validación inline
   }
 
   loadComponentMetadata() {
@@ -123,7 +129,7 @@ class ComponentGenerator {
 
   generateIterativeComponent(component, metadata, dataSource) {
     const query = dataSource?.query || {};
-    const queryString = this.buildQueryString(query, component.name);
+    const queryString = this.buildQueryString(query, component.name, dataSource);
     const mapping = dataSource?.mapping || {};
 
     const paramMappings = metadata.parameters.map(param => {
@@ -214,7 +220,7 @@ class ComponentGenerator {
 
   generateAggregatedComponent(component, metadata, dataSource) {
     const query = dataSource?.query || {};
-    const queryString = this.buildQueryString(query, component.name);
+    const queryString = this.buildQueryString(query, component.name, dataSource);
     // FUENTE ÚNICA DE VERDAD: Usar mapping de dataSource (page-templates.json)
     const mapping = dataSource?.mapping || {};
 
@@ -373,15 +379,12 @@ class ComponentGenerator {
   }
 
 
-  buildQueryString(query, componentName) {
-    // Asegurar post_type basado en el mapeo de metadata
-    if (!query.post_type && this.metadata.componentMapping) {
-      const mappedPostType = this.metadata.componentMapping[componentName];
-      if (mappedPostType) {
-        query.post_type = mappedPostType;
-      }
+  buildQueryString(query, componentName, dataSource = null) {
+    // 🎯 SINGLE SOURCE OF TRUTH: Usar postType desde dataSource (page-templates.json)
+    if (!query.post_type && dataSource && dataSource.postType) {
+      query.post_type = dataSource.postType;
     }
-    
+
     return Object.entries(query)
       .map(([key, value]) => `'${key}' => ${typeof value === 'string' ? `'${value}'` : value}`)
       .join(', ');
@@ -442,9 +445,9 @@ class ComponentGenerator {
     
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     
-    // Validar sintaxis PHP pero escribir archivo para debug
+    // Validar sintaxis PHP usando método estático modernizado
     const filename = path.basename(outputPath);
-    const isValidPHP = this.phpValidator.validatePHPContent(phpComponent, filename);
+    const isValidPHP = PHPValidator.validateContent(phpComponent, filename);
 
     // SIEMPRE escribir archivo para debug
     fs.writeFileSync(outputPath, phpComponent);

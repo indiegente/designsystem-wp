@@ -1,5 +1,7 @@
 const ValidatorInterface = require('../core/validator-interface');
 const ConfigSingleton = require('../../wp-generator/core/config-singleton');
+const fs = require('fs');
+const path = require('path');
 
 /**
  * Component Validator
@@ -71,6 +73,12 @@ class ComponentValidator extends ValidatorInterface {
 
     // Validar consistencia de metadata
     this.validateMetadataConsistency(metadata);
+
+    // 🔒 NUEVA: Validar escape metadata obligatoria (Babel AST)
+    this.validateEscapeMetadata(metadata);
+
+    // 🚨 NUEVA: Validar fail-fast compliance (.rules)
+    this.validateFailFastCompliance(metadata);
 
     // Validar configuración de páginas
     this.validatePageConfiguration(pageTemplates, metadata);
@@ -573,7 +581,160 @@ class ComponentValidator extends ValidatorInterface {
         'warning',
         { type: 'component-generated', component: componentName, path: componentPath }
       );
+
+      // 🔧 NUEVA: Validar contenido PHP sin fallbacks
+      if (fs.existsSync(componentPath)) {
+        const phpContent = fs.readFileSync(componentPath, 'utf8');
+        this.validateGeneratedPHPFailFast(componentName, phpContent);
+      }
     });
+  }
+
+  /**
+   * 🔒 NUEVA: Validar escape metadata obligatoria para Babel AST
+   */
+  validateEscapeMetadata(metadata) {
+    Object.entries(metadata).forEach(([componentName, componentMeta]) => {
+      // Skip non-component entries
+      if (!componentMeta.parameters) return;
+
+      // Validar que todos los parameters tengan escape
+      componentMeta.parameters.forEach(param => {
+        this.assert(
+          param.escape !== undefined,
+          `Parámetro '${param.name}' en componente '${componentName}' debe tener campo 'escape'`,
+          'error',
+          {
+            type: 'missing-escape-metadata',
+            component: componentName,
+            parameter: param.name,
+            fix: `Agregar "escape": "html|url|attr" en metadata.json`
+          }
+        );
+
+        // Validar valores de escape válidos
+        const validEscapeTypes = ['html', 'url', 'attr', 'js', 'none'];
+        if (param.escape) {
+          this.assert(
+            validEscapeTypes.includes(param.escape),
+            `Escape type '${param.escape}' inválido para '${param.name}' en '${componentName}'`,
+            'error',
+            {
+              type: 'invalid-escape-type',
+              component: componentName,
+              parameter: param.name,
+              validTypes: validEscapeTypes
+            }
+          );
+        }
+      });
+
+      // Validar arrayFields si existen
+      if (componentMeta.arrayFields) {
+        Object.entries(componentMeta.arrayFields).forEach(([arrayName, fields]) => {
+          fields.forEach(field => {
+            this.assert(
+              field.escape !== undefined,
+              `Array field '${field.name}' en '${arrayName}' de componente '${componentName}' debe tener campo 'escape'`,
+              'error',
+              {
+                type: 'missing-array-escape-metadata',
+                component: componentName,
+                arrayName,
+                fieldName: field.name,
+                fix: `Agregar "escape": "html|url|attr" en arrayFields.${arrayName}`
+              }
+            );
+          });
+        });
+      }
+    });
+  }
+
+  /**
+   * 🚨 NUEVA: Validar fail-fast compliance (.rules)
+   */
+  validateFailFastCompliance(metadata) {
+    // Verificar que no haya estructuras que sugieran fallbacks
+    Object.entries(metadata).forEach(([componentName, componentMeta]) => {
+      // Validar que no haya parámetros con valores "or" o fallbacks evidentes
+      if (componentMeta.parameters) {
+        componentMeta.parameters.forEach(param => {
+          // Detectar posibles fallbacks en defaults
+          if (param.default && typeof param.default === 'string') {
+            const hasFallbackPattern = param.default.includes('||') ||
+                                     param.default.includes('??') ||
+                                     param.default.includes('fallback');
+
+            this.assert(
+              !hasFallbackPattern,
+              `Parámetro '${param.name}' en '${componentName}' no debe tener fallbacks silenciosos`,
+              'warning',
+              {
+                type: 'potential-fallback',
+                component: componentName,
+                parameter: param.name,
+                value: param.default
+              }
+            );
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * 🔧 NUEVA: Validar PHP generado sin fallbacks
+   */
+  validateGeneratedPHPFailFast(componentName, phpContent) {
+    // Buscar patterns que indican fallbacks DE LÓGICA PHP (no visuales)
+    const fallbackPatterns = [
+      { pattern: /\$\w+\s*\|\|\s*['"]/g, name: 'Variable OR fallback operator' },
+      { pattern: /\?\?/g, name: 'Nullish coalescing' },
+      { pattern: /fallback/gi, name: 'Fallback keyword' },
+      { pattern: /default.*value/gi, name: 'Default value fallback' },
+      { pattern: /\?.+:.*esc_html/g, name: 'Conditional escape fallback' }
+    ];
+
+    fallbackPatterns.forEach(({ pattern, name }) => {
+      const matches = phpContent.match(pattern);
+      if (matches) {
+        this.assert(
+          false,
+          `PHP generado para '${componentName}' contiene ${name} que viola .rules`,
+          'error',
+          {
+            type: 'php-fallback-detected',
+            component: componentName,
+            pattern: name,
+            count: matches.length,
+            fix: 'Eliminar fallbacks y usar fail-fast en lugar de fallbacks silenciosos'
+          }
+        );
+      }
+    });
+
+    // Verificar que todos los escapes sean explícitos
+    const escapePattern = /esc_(?:html|url|attr|js)\s*\(/g;
+    const variablePattern = /\$\w+/g;
+
+    const escapes = phpContent.match(escapePattern) || [];
+    const variables = phpContent.match(variablePattern) || [];
+
+    // Aproximación: debe haber al menos tantos escapes como variables
+    if (variables.length > 0 && escapes.length === 0) {
+      this.assert(
+        false,
+        `PHP generado para '${componentName}' no usa funciones de escape`,
+        'error',
+        {
+          type: 'no-escape-functions',
+          component: componentName,
+          variables: variables.length,
+          escapes: escapes.length
+        }
+      );
+    }
   }
 }
 

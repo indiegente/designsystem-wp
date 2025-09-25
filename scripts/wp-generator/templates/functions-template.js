@@ -1,8 +1,14 @@
 class FunctionsTemplate {
   constructor(config) {
     this.config = config;
-    this.metadata = this.loadMetadata();
-    
+
+    // 🎯 SINGLE SOURCE OF TRUTH: Usar ConfigSingleton
+    const ConfigSingleton = require('../core/config-singleton');
+    const configSingleton = ConfigSingleton.getInstance();
+
+    this.metadata = configSingleton.getMetadata();
+    this.pageTemplates = configSingleton.getPageTemplates();
+
     // Extraer configuraciones dinámicas
     this.functionPrefix = config.phpFunctionPrefix || 'theme';
     this.enqueueHandle = config.themeName || 'theme';
@@ -10,14 +16,9 @@ class FunctionsTemplate {
     this.assetPaths = config.assetPaths || { css: 'assets/css', js: 'assets/js' };
   }
 
+  // Método obsoleto - usar ConfigSingleton
   loadMetadata() {
-    const fs = require('fs');
-    const path = require('path');
-    const metadataPath = path.join(this.config.srcDir, 'metadata.json');
-
-    if (fs.existsSync(metadataPath)) {
-      return JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-    }
+    // Mantenido para compatibilidad, pero ya no se usa
     return {};
   }
 
@@ -101,9 +102,9 @@ ${configEntries.join(',\n')}
   }
 
   generatePostTypes() {
-    if (!this.metadata.postTypes) return '';
-    
-    return Object.entries(this.metadata.postTypes)
+    if (!this.pageTemplates.postTypes) return '';
+
+    return Object.entries(this.pageTemplates.postTypes)
       .map(([postType, config]) => {
         const supports = config.supports ? `array('${config.supports.join("', '")}')` : "array('title', 'editor')";
         const showInRest = config.show_in_rest ? "'show_in_rest' => true," : "";

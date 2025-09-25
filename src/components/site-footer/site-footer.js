@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './site-footer.css'; // For global Storybook/WordPress styles
+import componentStyles from './site-footer.css?inline'; // For Shadow DOM
 
 export class SiteFooter extends LitElement {
   static properties = {
@@ -28,7 +30,8 @@ export class SiteFooter extends LitElement {
     this.customText = 'Todos los derechos reservados.';
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   getCurrentYear() {
     return new Date().getFullYear();

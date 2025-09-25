@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 const { ValidationEngine } = require('../core/validation-engine');
-const ConfigSource = require('../sources/config-source');
 
-// Validators que NO requieren HTML
+// Validators que NO requieren HTML (single source of truth)
 const ComponentValidator = require('../validators/component-validator');
+const MetadataValidator = require('../validators/metadata-validator');
+const PHPValidator = require('../validators/php-validator');
+const StructureValidator = require('../validators/structure-validator');
 
 /**
  * Offline Validation CLI
@@ -35,29 +37,20 @@ class OfflineValidationCLI {
     console.log('');
 
     try {
-      // 1. Cargar configuraciones
-      const configSource = ConfigSource.create();
-      const configs = await configSource.prepare({});
-
-      console.log('📋 Configuraciones cargadas:');
-      console.log(`   • Componentes: ${Object.keys(configs.metadata).length}`);
-      console.log(`   • Páginas: ${Object.keys(configs.pageTemplates).length}`);
-      console.log(`   • Proyecto: ${configs.packageJson.name || 'sin nombre'}`);
-      console.log('');
-
-      // 2. Configurar validation engine (solo validators offline)
+      // 1. Configurar validation engine (single source of truth)
       const engine = this.setupValidationEngine();
 
-      // 3. Preparar contexto
+      // 2. Preparar contexto básico
       const context = {
-        configs,
         projectRoot: process.cwd(),
         environment: process.env.NODE_ENV || 'development',
         mode: 'offline'
       };
 
-      // 4. Ejecutar validaciones
+      console.log('📋 Usando ConfigSingleton como source of truth');
       console.log('🚀 Ejecutando validaciones offline...');
+
+      // 3. Ejecutar validaciones
       const report = await engine.runAll(context);
 
       // 5. Mostrar resultados
@@ -102,21 +95,22 @@ class OfflineValidationCLI {
    * Configura el validation engine solo con validators offline
    */
   setupValidationEngine() {
-    const builder = ValidationEngine.builder()
-      .source('config', ConfigSource.create());
+    const builder = ValidationEngine.builder();
 
     // Solo validators que funcionan sin HTML
     if (this.config.includeStructure && !this.config.componentsOnly) {
-      builder.validator('structure', new FileStructureValidator());
-    }
-
-    if (this.config.includeSecurity && !this.config.componentsOnly) {
-      builder.validator('security', new WordPressSecurityValidator());
+      builder.validator('structure', new StructureValidator({ mode: 'offline' }));
     }
 
     if (this.config.includeComponents) {
+      // 📋 NUEVO: MetadataValidator para validaciones Babel AST
+      builder.validator('metadata', new MetadataValidator({ mode: 'offline' }));
+
       // ComponentValidator ahora soporta modo offline
       builder.validator('components', new ComponentValidator({ mode: 'offline' }));
+
+      // 🐘 NUEVO: PHPValidator migrado y modernizado
+      builder.validator('php', new PHPValidator({ mode: 'offline' }));
     }
 
     // Middleware para logging
@@ -180,240 +174,7 @@ class OfflineValidationCLI {
   }
 }
 
-// Validators básicos para modo offline
-class FileStructureValidator extends require('../core/validator-interface') {
-  constructor() {
-    super('File Structure Validator');
-    this.requiredSources = ['config'];
-  }
-
-  async validate(sources) {
-    const { configs } = sources.config || {};
-
-    console.log('   📁 Validando estructura de archivos...');
-
-    // Validar estructura de archivos
-    this.validateFileStructure();
-
-    // Validar configuraciones básicas
-    this.validateConfigurations(configs);
-
-    // Validar dependencias
-    this.validateDependencies(configs);
-  }
-
-  validateFileStructure() {
-    const fs = require('fs');
-    const requiredFiles = [
-      'package.json',
-      'src/metadata.json',
-      'src/page-templates.json'
-    ];
-
-    requiredFiles.forEach(file => {
-      this.validateFileExists(file, `Archivo requerido: ${file}`);
-    });
-
-    // Validar estructura de directorios
-    const requiredDirs = [
-      'src',
-      'scripts/wp-generator'
-    ];
-
-    requiredDirs.forEach(dir => {
-      this.assert(
-        fs.existsSync(dir),
-        `Directorio requerido: ${dir}`,
-        'error',
-        { type: 'directory', path: dir }
-      );
-    });
-
-    // Validar que wordpress-output existe si estamos validando generación
-    const hasWordPressOutput = fs.existsSync('wordpress-output');
-    this.assert(
-      hasWordPressOutput,
-      'Directorio wordpress-output debe existir (ejecutar npm run wp:generate)',
-      'warning',
-      { type: 'wordpress-output' }
-    );
-  }
-
-  validateConfigurations(configs) {
-    if (!configs) return;
-
-    const { metadata, pageTemplates, packageJson } = configs;
-
-    // Validar metadata
-    this.assert(
-      Object.keys(metadata).length > 0,
-      'metadata.json debe contener componentes',
-      'error',
-      { type: 'config-metadata' }
-    );
-
-    // Validar page templates
-    this.assert(
-      Object.keys(pageTemplates).length > 0,
-      'page-templates.json debe contener páginas',
-      'error',
-      { type: 'config-pages' }
-    );
-
-    // Validar package.json
-    this.assert(
-      packageJson.name && packageJson.name.length > 0,
-      'package.json debe tener nombre del proyecto',
-      'error',
-      { type: 'config-package' }
-    );
-  }
-
-  validateDependencies(configs) {
-    const { packageJson } = configs || {};
-    if (!packageJson) return;
-
-    // Validar dependencias críticas
-    const criticalDeps = ['vite'];
-    const devDeps = packageJson.devDependencies || {};
-    const deps = packageJson.dependencies || {};
-
-    criticalDeps.forEach(dep => {
-      const hasDep = deps[dep] || devDeps[dep];
-      this.assert(
-        hasDep,
-        `Dependencia crítica faltante: ${dep}`,
-        'error',
-        { type: 'dependency', package: dep }
-      );
-    });
-  }
-}
-
-class WordPressSecurityValidator extends require('../core/validator-interface') {
-  constructor() {
-    super('WordPress Security Validator');
-    this.requiredSources = ['config'];
-  }
-
-  async validate(sources) {
-    console.log('   🔒 Validando seguridad de WordPress...');
-
-    // Validar configuraciones de seguridad
-    this.validateSecurityConfigurations();
-
-    // Validar archivos generados
-    this.validateGeneratedFiles();
-  }
-
-  validateSecurityConfigurations() {
-    // Validar que no hay secrets hardcoded
-    this.validateNoHardcodedSecrets();
-  }
-
-  validateGeneratedFiles() {
-    const fs = require('fs');
-
-    // Buscar archivos PHP generados
-    const outputDir = 'wordpress-output';
-    if (!fs.existsSync(outputDir)) {
-      this.assert(
-        false,
-        'wordpress-output no existe - ejecutar npm run wp:generate primero',
-        'warning',
-        { type: 'no-wordpress-output' }
-      );
-      return;
-    }
-
-    this.scanDirectoryForSecurityIssues(outputDir);
-  }
-
-  validateNoHardcodedSecrets() {
-    const sensitivePatterns = [
-      /api[_-]?key\s*[:=]\s*['"][^'"]+['"]/i,
-      /secret[_-]?key\s*[:=]\s*['"][^'"]+['"]/i,
-      /password\s*[:=]\s*['"][^'"]+['"]/i,
-      /token\s*[:=]\s*['"][^'"]+['"]/i
-    ];
-
-    // Buscar en archivos de configuración
-    const configFiles = ['src/metadata.json', 'src/page-templates.json'];
-
-    configFiles.forEach(file => {
-      if (require('fs').existsSync(file)) {
-        const content = require('fs').readFileSync(file, 'utf8');
-
-        sensitivePatterns.forEach(pattern => {
-          const matches = content.match(pattern);
-          if (matches) {
-            this.assert(
-              false,
-              `Posible secret hardcoded en ${file}`,
-              'error',
-              { type: 'hardcoded-secret', file, pattern: pattern.toString() }
-            );
-          }
-        });
-      }
-    });
-  }
-
-  scanDirectoryForSecurityIssues(dir) {
-    const fs = require('fs');
-    const path = require('path');
-
-    try {
-      const files = fs.readdirSync(dir);
-
-      files.forEach(file => {
-        const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-
-        if (stat.isDirectory()) {
-          this.scanDirectoryForSecurityIssues(filePath);
-        } else if (file.endsWith('.php')) {
-          this.validatePHPFile(filePath);
-        }
-      });
-    } catch (error) {
-      // Ignorar errores de acceso a directorios
-    }
-  }
-
-  validatePHPFile(filePath) {
-    try {
-      const content = require('fs').readFileSync(filePath, 'utf8');
-
-      // Validar escape de datos
-      const hasOutput = content.includes('echo') || content.includes('<?=');
-      const hasEscape = content.includes('esc_') || content.includes('wp_kses');
-
-      if (hasOutput) {
-        this.assert(
-          hasEscape,
-          `Archivo ${filePath} puede tener output sin escape`,
-          'warning',
-          { type: 'php-escape', file: filePath }
-        );
-      }
-
-      // Validar que no hay eval() o similar
-      const dangerousFunctions = ['eval(', 'exec(', 'system(', 'shell_exec('];
-      dangerousFunctions.forEach(func => {
-        this.assert(
-          !content.includes(func),
-          `Función peligrosa ${func} en ${filePath}`,
-          'error',
-          { type: 'dangerous-function', file: filePath, function: func }
-        );
-      });
-
-    } catch (error) {
-      // Ignorar errores de lectura de archivos
-    }
-  }
-}
+// Validators inline eliminados - usar validators modulares existentes
 
 // Ejecutar si se llama directamente
 if (require.main === module) {

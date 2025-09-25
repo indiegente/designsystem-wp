@@ -21,9 +21,10 @@
     "phpcs:fix": "php composer.phar exec phpcbf -- --standard=WordPress wordpress-output/",
     "wp:lint": "php composer.phar exec phpcs -- --standard=WordPress wordpress-output/",
     "wp:lint:fix": "php composer.phar exec phpcbf -- --standard=WordPress wordpress-output/",
-    "stories:generate": "node scripts/storybook/generate-stories.js",
-    "stories:generate:robust": "node scripts/storybook/generate-stories-robust.js",
-    "stories:test": "node scripts/storybook/test-story-generator.js"
+    "stories:generate": "node src/storybook/generate-stories.js",
+    "stories:generate:robust": "node src/storybook/generate-stories-robust.js",
+    "stories:single": "node src/storybook/generate-stories-robust.js",
+    "stories:test": "node src/storybook/test-story-generator.js"
   },
   "keywords": [],
   "author": "",

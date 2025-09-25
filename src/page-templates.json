@@ -1,4 +1,41 @@
 {
+  "postTypes": {
+    "carrera": {
+      "labels": {
+        "name": "Carreras",
+        "singular_name": "Carrera"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
+    },
+    "testimonio": {
+      "labels": {
+        "name": "Testimonios",
+        "singular_name": "Testimonio"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
+    },
+    "curso": {
+      "labels": {
+        "name": "Cursos",
+        "singular_name": "Curso"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"]
+    },
+    "producto": {
+      "labels": {
+        "name": "Productos",
+        "singular_name": "Producto"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt", "custom-fields"],
+      "show_in_rest": true
+    }
+  },
   "page-carreras": {
     "file": "page-carreras.php",
     "title": "Carreras",

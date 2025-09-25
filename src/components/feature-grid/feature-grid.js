@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './feature-grid.css'; // For global Storybook/WordPress styles
+import componentStyles from './feature-grid.css?inline'; // For Shadow DOM
 
 export class FeatureGrid extends LitElement {
   static properties = {
@@ -14,7 +16,8 @@ export class FeatureGrid extends LitElement {
     this.features = [];
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   render() {
     return html`

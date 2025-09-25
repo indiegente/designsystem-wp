@@ -1,59 +1,81 @@
+import '../../design-system.stories.js';
 import './hero-section.js';
 
 export default {
-  title: 'Componentes/Hero Section',
+  title: 'Components/Hero Section',
   component: 'tl-hero-section',
-  tags: ['autodocs'],
+  argTypes: {
+    "title": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "subtitle": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "ctaText": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "backgroundImage": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    }
+},
   parameters: {
     docs: {
       description: {
-        component: 'A hero section component with customizable title, subtitle, CTA button, and background image.'
+        component: `
+# Hero Section
+
+Componente del design system
+
+## Características
+
+- ✅ Responsive design
+- ✅ Accesible (ARIA)
+- ✅ Theming con design tokens
+- ✅ Integración WordPress automática
+
+## Uso en WordPress
+
+Componente estático integrado con WordPress.
+
+
+## ⚠️ Notas de Generación
+
+
+### Advertencias:
+
+- ⚠️ Posible error de sintaxis: Missing comma in properties
+- ⚠️ Posible error de sintaxis: Missing comma before closing brace
+
+        `
       }
-    }
-  },
-  argTypes: {
-    title: { 
-      control: 'text',
-      description: 'The main heading text'
-    },
-    subtitle: { 
-      control: 'text',
-      description: 'The subtitle text below the main heading'
-    },
-    ctaText: { 
-      control: 'text',
-      description: 'The call-to-action button text'
-    },
-    backgroundImage: { 
-      control: 'text',
-      description: 'URL of the background image (optional)'
     }
   }
 };
 
-const Template = (args) => `
-  <div style="width: 100%;">
-    <tl-hero-section
-      title="${args.title}"
-      subtitle="${args.subtitle}"
-      ctaText="${args.ctaText}"
-      backgroundImage="${args.backgroundImage}">
-    </tl-hero-section>
-  </div>
-`;
+const Template = (args) => {
+  const element = document.createElement('tl-hero-section');
+  element.title = args.title;
+  element.subtitle = args.subtitle;
+  element.ctaText = args.ctaText;
+  element.backgroundImage = args.backgroundImage;
+  return element;
+};
 
 export const Default = Template.bind({});
 Default.args = {
-  title: 'Transforma tu futuro con Toulouse Lautrec',
-  subtitle: 'Carreras técnicas que te preparan para el mundo laboral',
-  ctaText: 'Ver Carreras',
-  backgroundImage: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200'
+  "title": "Título del Componente",
+  "subtitle": "Subtítulo descriptivo",
+  "ctaText": "Valor para ctaText",
+  "backgroundImage": "Valor para backgroundImage"
 };
 
-export const WithoutImage = Template.bind({});
-WithoutImage.args = {
-  title: 'Solo con gradiente',
-  subtitle: 'Sin imagen de fondo',
-  ctaText: 'Explorar',
-  backgroundImage: ''
+
+export const Minimal = Template.bind({});
+Minimal.args = {
+  title: "Ejemplo Mínimo"
 };
+

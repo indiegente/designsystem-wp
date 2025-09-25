@@ -160,6 +160,38 @@ class ConfigSingleton {
   }
 
   /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Leer metadata.json
+   */
+  getMetadata() {
+    const fs = require('fs');
+    const path = require('path');
+
+    const filePath = path.join(this.config.paths.src, 'metadata.json');
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`❌ FAIL FAST: metadata.json no encontrado: ${filePath}`);
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(content);
+  }
+
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Leer page-templates.json
+   */
+  getPageTemplates() {
+    const fs = require('fs');
+    const path = require('path');
+
+    const filePath = path.join(this.config.paths.src, 'page-templates.json');
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`❌ FAIL FAST: page-templates.json no encontrado: ${filePath}`);
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(content);
+  }
+
+  /**
    * Debug de configuración
    */
   printDebug() {

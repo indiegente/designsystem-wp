@@ -1,53 +1,12 @@
 {
-  "postTypes": {
-    "carrera": {
-      "labels": {
-        "name": "Carreras",
-        "singular_name": "Carrera"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"],
-      "show_in_rest": true
-    },
-    "testimonio": {
-      "labels": {
-        "name": "Testimonios",
-        "singular_name": "Testimonio"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"],
-      "show_in_rest": true
-    },
-    "curso": {
-      "labels": {
-        "name": "Cursos",
-        "singular_name": "Curso"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt"]
-    },
-    "producto": {
-      "labels": {
-        "name": "Productos",
-        "singular_name": "Producto"
-      },
-      "public": true,
-      "supports": ["title", "editor", "thumbnail", "excerpt", "custom-fields"],
-      "show_in_rest": true
-    }
-  },
-  "componentMapping": {
-    "course-card": "carrera",
-    "testimonials": "testimonio"
-  },
   "hero-section": {
     "type": "static",
     "phpFunction": "render_hero_section",
     "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "ctaText", "type": "string", "default": "" },
-      { "name": "backgroundImage", "type": "string", "default": "" }
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "subtitle", "type": "string", "default": "", "escape": "html" },
+      { "name": "ctaText", "type": "string", "default": "", "escape": "html" },
+      { "name": "backgroundImage", "type": "string", "default": "", "escape": "url" }
     ],
     "performance": {
       "lazyLoading": false,
@@ -58,11 +17,11 @@
     "type": "iterative",
     "phpFunction": "render_course_card",
     "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "description", "type": "string", "default": "" },
-      { "name": "image", "type": "string", "default": "" },
-      { "name": "link", "type": "string", "default": "" },
-      { "name": "linkText", "type": "string", "default": "Ver más" }
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "description", "type": "string", "default": "", "escape": "html" },
+      { "name": "image", "type": "string", "default": "", "escape": "url" },
+      { "name": "link", "type": "string", "default": "", "escape": "url" },
+      { "name": "linkText", "type": "string", "default": "Ver más", "escape": "html" }
     ],
     "performance": {
       "lazyLoading": true,
@@ -73,18 +32,18 @@
     "type": "aggregated",
     "phpFunction": "render_testimonials",
     "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "testimonials", "type": "array", "default": "[]" }
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "subtitle", "type": "string", "default": "", "escape": "html" },
+      { "name": "testimonials", "type": "array", "default": "[]", "escape": "none" }
     ],
     "arrayFields": {
       "testimonials": [
-        { "name": "name", "type": "string", "fieldType": "text" },
-        { "name": "role", "type": "string", "fieldType": "text" },
-        { "name": "content", "type": "string", "fieldType": "textarea" },
-        { "name": "rating", "type": "number", "fieldType": "number" },
-        { "name": "user_photo", "type": "string", "fieldType": "image" },
-        { "name": "course", "type": "string", "fieldType": "text" }
+        { "name": "name", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "role", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "content", "type": "string", "fieldType": "textarea", "escape": "html" },
+        { "name": "rating", "type": "number", "fieldType": "number", "escape": "html" },
+        { "name": "user_photo", "type": "string", "fieldType": "image", "escape": "url" },
+        { "name": "course", "type": "string", "fieldType": "text", "escape": "html" }
       ]
     },
     "performance": {
@@ -96,32 +55,52 @@
     "type": "aggregated",
     "phpFunction": "render_feature_grid",
     "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "features", "type": "array", "default": "[]" }
-    ]
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "subtitle", "type": "string", "default": "", "escape": "html" },
+      { "name": "features", "type": "array", "default": "[]", "escape": "none" }
+    ],
+    "arrayFields": {
+      "features": [
+        { "name": "icon", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "description", "type": "string", "fieldType": "textarea", "escape": "html" }
+      ]
+    }
   },
   "interactive-gallery": {
     "type": "comprehensive",
     "phpFunction": "render_interactive_gallery",
     "parameters": [
-      { "name": "title", "type": "string", "default": "" },
-      { "name": "subtitle", "type": "string", "default": "" },
-      { "name": "images", "type": "array", "default": "[]" },
-      { "name": "autoPlay", "type": "boolean", "default": "true" },
-      { "name": "showThumbnails", "type": "boolean", "default": "true" }
-    ]
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "subtitle", "type": "string", "default": "", "escape": "html" },
+      { "name": "images", "type": "array", "default": "[]", "escape": "none" },
+      { "name": "autoPlay", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "showThumbnails", "type": "boolean", "default": "true", "escape": "attr" }
+    ],
+    "arrayFields": {
+      "images": [
+        { "name": "src", "type": "string", "fieldType": "image", "escape": "url" },
+        { "name": "alt", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "caption", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   },
   "test-showcase": {
     "type": "static",
     "phpFunction": "render_test_showcase",
     "parameters": [
-      { "name": "title", "type": "string", "default": "Test Showcase - Validación Completa" },
-      { "name": "description", "type": "string", "default": "Componente para probar todos los managers" },
-      { "name": "testImages", "type": "array", "default": "array()" },
-      { "name": "testData", "type": "object", "default": "array()" },
-      { "name": "enableAnalytics", "type": "boolean", "default": "true" }
+      { "name": "title", "type": "string", "default": "Test Showcase - Validación Completa", "escape": "html" },
+      { "name": "description", "type": "string", "default": "Componente para probar todos los managers", "escape": "html" },
+      { "name": "testImages", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "testData", "type": "object", "default": "array()", "escape": "none" },
+      { "name": "enableAnalytics", "type": "boolean", "default": "true", "escape": "attr" }
     ],
+    "arrayFields": {
+      "testImages": [
+        { "name": "src", "type": "string", "fieldType": "image", "escape": "url" },
+        { "name": "alt", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    },
     "performance": {
       "lazyLoading": true,
       "preloadImages": false
@@ -131,50 +110,90 @@
     "type": "static",
     "phpFunction": "render_site_header",
     "parameters": [
-      { "name": "siteName", "type": "string", "default": "Design System Site" },
-      { "name": "homeUrl", "type": "string", "default": "/" },
-      { "name": "showNavigation", "type": "boolean", "default": "true" },
-      { "name": "navigationItems", "type": "array", "default": "array()" }
-    ]
+      { "name": "siteName", "type": "string", "default": "Design System Site", "escape": "html" },
+      { "name": "homeUrl", "type": "string", "default": "/", "escape": "url" },
+      { "name": "showNavigation", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "navigationItems", "type": "array", "default": "array()", "escape": "none" }
+    ],
+    "arrayFields": {
+      "navigationItems": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   },
   "site-footer": {
     "type": "static",
     "phpFunction": "render_site_footer",
     "parameters": [
-      { "name": "siteName", "type": "string", "default": "Design System Site" },
-      { "name": "showCopyright", "type": "boolean", "default": "true" },
-      { "name": "showNavigation", "type": "boolean", "default": "true" },
-      { "name": "navigationItems", "type": "array", "default": "array()" },
-      { "name": "socialLinks", "type": "array", "default": "array()" },
-      { "name": "customText", "type": "string", "default": "Todos los derechos reservados." }
-    ]
+      { "name": "siteName", "type": "string", "default": "Design System Site", "escape": "html" },
+      { "name": "showCopyright", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "showNavigation", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "navigationItems", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "socialLinks", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "customText", "type": "string", "default": "Todos los derechos reservados.", "escape": "html" }
+    ],
+    "arrayFields": {
+      "navigationItems": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" }
+      ],
+      "socialLinks": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "icon", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   },
   "error-404": {
     "type": "static",
     "phpFunction": "render_error_404",
     "parameters": [
-      { "name": "title", "type": "string", "default": "404" },
-      { "name": "subtitle", "type": "string", "default": "Página no encontrada" },
-      { "name": "description", "type": "string", "default": "Lo sentimos, la página que buscas no existe o ha sido movida." },
-      { "name": "homeUrl", "type": "string", "default": "/" },
-      { "name": "homeText", "type": "string", "default": "Volver al inicio" },
-      { "name": "showSearch", "type": "boolean", "default": "true" },
-      { "name": "showSuggestions", "type": "boolean", "default": "true" },
-      { "name": "suggestions", "type": "array", "default": "array()" }
-    ]
+      { "name": "title", "type": "string", "default": "404", "escape": "html" },
+      { "name": "subtitle", "type": "string", "default": "Página no encontrada", "escape": "html" },
+      { "name": "description", "type": "string", "default": "Lo sentimos, la página que buscas no existe o ha sido movida.", "escape": "html" },
+      { "name": "homeUrl", "type": "string", "default": "/", "escape": "url" },
+      { "name": "homeText", "type": "string", "default": "Volver al inicio", "escape": "html" },
+      { "name": "showSearch", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "showSuggestions", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "suggestions", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "handleSearch", "type": "string", "default": "", "escape": "html" },
+      { "name": "searchPlaceholder", "type": "string", "default": "Buscar...", "escape": "html" }
+    ],
+    "arrayFields": {
+      "suggestions": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "description", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   },
   "search-results": {
     "type": "static",
     "phpFunction": "render_search_results",
     "parameters": [
-      { "name": "searchTerm", "type": "string", "default": "" },
-      { "name": "totalResults", "type": "number", "default": "0" },
-      { "name": "results", "type": "array", "default": "array()" },
-      { "name": "showNoResults", "type": "boolean", "default": "false" },
-      { "name": "noResultsTitle", "type": "string", "default": "No se encontraron resultados" },
-      { "name": "noResultsMessage", "type": "string", "default": "Intenta con otros términos de búsqueda." },
-      { "name": "showSuggestions", "type": "boolean", "default": "true" },
-      { "name": "suggestions", "type": "array", "default": "array()" }
-    ]
+      { "name": "searchTerm", "type": "string", "default": "", "escape": "html" },
+      { "name": "totalResults", "type": "number", "default": "0", "escape": "html" },
+      { "name": "results", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "showNoResults", "type": "boolean", "default": "false", "escape": "attr" },
+      { "name": "noResultsTitle", "type": "string", "default": "No se encontraron resultados", "escape": "html" },
+      { "name": "noResultsMessage", "type": "string", "default": "Intenta con otros términos de búsqueda.", "escape": "html" },
+      { "name": "showSuggestions", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "suggestions", "type": "array", "default": "array()", "escape": "none" }
+    ],
+    "arrayFields": {
+      "results": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "excerpt", "type": "string", "fieldType": "textarea", "escape": "html" },
+        { "name": "date", "type": "string", "fieldType": "date", "escape": "html" },
+        { "name": "type", "type": "string", "fieldType": "text", "escape": "html" }
+      ],
+      "suggestions": [
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" },
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "description", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   }
 }

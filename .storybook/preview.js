@@ -1,4 +1,4 @@
-import '../src/tokens/design-tokens.css';
+import '../src/main.css'; // CSS unificado - incluye design tokens + todos los componentes
 
 export const parameters = {
   actions: { argTypesRegex: "^on[A-Z].*" },

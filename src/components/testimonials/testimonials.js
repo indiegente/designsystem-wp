@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './testimonials.css'; // For global Storybook/WordPress styles
+import componentStyles from './testimonials.css?inline'; // For Shadow DOM
 
 export class Testimonials extends LitElement {
   static properties = {
@@ -14,7 +16,8 @@ export class Testimonials extends LitElement {
     this.testimonials = [];
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   render() {
     return html`

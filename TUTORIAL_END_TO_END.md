@@ -9,8 +9,8 @@ Este tutorial te guía paso a paso desde la creación de un componente Lit en St
 - [📖 Paso a Paso](#-paso-a-paso)
   - [Paso 1: Crear el Componente Lit](#paso-1-crear-el-componente-lit)
   - [Paso 2: Documentar en Storybook](#paso-2-documentar-en-storybook)
-  - [Paso 3: Configurar Metadata](#paso-3-configurar-metadata)
-  - [Paso 4: Configurar Página WordPress](#paso-4-configurar-página-wordpress)
+  - [Paso 3: Configurar Metadata (Nueva Arquitectura)](#paso-3-configurar-metadata-nueva-arquitectura)
+  - [Paso 4: Configurar WordPress Data (page-templates.json)](#paso-4-configurar-wordpress-data-page-templatesjson)
   - [Paso 5: Crear Extensión Personalizada](#paso-5-crear-extensión-personalizada)
   - [Paso 6: Generar Tema WordPress](#paso-6-generar-tema-wordpress)
   - [Paso 7: Validar y Probar](#paso-7-validar-y-probar)
@@ -48,19 +48,122 @@ npm --version
 
 Vamos a crear un componente **Product Card** que mostrará productos/servicios.
 
-#### 1.1 Crear estructura de archivos
+#### 1.1 Crear estructura de archivos (Arquitectura Modernizada)
 
 ```bash
 mkdir src/components/product-card
 touch src/components/product-card/product-card.js
+touch src/components/product-card/product-card.css    # ← CSS separado (NUEVO)
 touch src/components/product-card/product-card.stories.js
 ```
 
-#### 1.2 Implementar el componente Lit
+**🎯 Separación obligatoria de estilos:**
+- **JS**: Solo lógica del componente
+- **CSS**: Todos los estilos en archivo separado
+- **Benefits**: Mejor conversión Lit→PHP, optimización Vite, mantenibilidad
+
+#### 1.2 Crear CSS separado (CRÍTICO - Arquitectura Modernizada)
+
+**🚨 REGLA CRÍTICA: NUNCA usar inline styles en Lit Components**
+
+```css
+/* src/components/product-card/product-card.css - OBLIGATORIO archivo separado */
+.product-card {
+  background: var(--tl-neutral-50);
+  border-radius: var(--tl-spacing-2);
+  border: 1px solid var(--tl-neutral-200);
+  padding: var(--tl-spacing-4);
+  transition: var(--tl-transition-normal);
+  box-shadow: var(--tl-shadow-sm);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.product-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--tl-shadow-lg);
+}
+
+.product-card.featured {
+  border: 2px solid var(--tl-primary-300);
+  background: var(--tl-primary-50);
+}
+
+.product-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: var(--tl-spacing-2);
+  margin-bottom: var(--tl-spacing-3);
+}
+
+.product-category {
+  display: inline-block;
+  background: var(--tl-primary-100);
+  color: var(--tl-primary-700);
+  padding: var(--tl-spacing-1) var(--tl-spacing-2);
+  border-radius: var(--tl-spacing-1);
+  font-size: var(--tl-font-size-sm);
+  font-weight: 600;
+  margin-bottom: var(--tl-spacing-2);
+}
+
+.product-title {
+  font-size: var(--tl-font-size-xl);
+  font-weight: 700;
+  color: var(--tl-neutral-900);
+  margin-bottom: var(--tl-spacing-2);
+  line-height: 1.3;
+}
+
+.product-description {
+  color: var(--tl-neutral-600);
+  line-height: 1.5;
+  margin-bottom: var(--tl-spacing-4);
+  flex-grow: 1;
+}
+
+.product-price {
+  font-size: var(--tl-font-size-2xl);
+  font-weight: 700;
+  color: var(--tl-primary-600);
+  margin-bottom: var(--tl-spacing-4);
+}
+
+.product-link {
+  display: inline-flex;
+  align-items: center;
+  background: var(--tl-primary-500);
+  color: white;
+  padding: var(--tl-spacing-3) var(--tl-spacing-4);
+  border-radius: var(--tl-spacing-2);
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--tl-transition-normal);
+}
+
+.product-link:hover {
+  background: var(--tl-primary-600);
+  transform: translateY(-1px);
+}
+
+.product-link::after {
+  content: '→';
+  margin-left: var(--tl-spacing-2);
+  transition: var(--tl-transition-normal);
+}
+
+.product-link:hover::after {
+  transform: translateX(4px);
+}
+```
+
+#### 1.3 Implementar el componente Lit (Solo lógica)
 
 ```javascript
 // src/components/product-card/product-card.js
-import { LitElement, html, css } from 'lit';
+import { LitElement, html } from 'lit';
 
 export class ProductCard extends LitElement {
   static properties = {
@@ -86,67 +189,90 @@ export class ProductCard extends LitElement {
     this.linkText = 'Ver más';
   }
 
-  static styles = css`
-    :host {
-      display: block;
-    }
+  // ⚡ SIN static styles - CSS en archivo separado
 
-    .product-card {
-      background: var(--tl-neutral-50);
-      border-radius: var(--tl-spacing-2);
-      padding: var(--tl-spacing-6);
-      box-shadow: var(--tl-shadow-md);
-      transition: var(--tl-transition-normal);
-      position: relative;
-      overflow: hidden;
-    }
+  render() {
+    return html`
+      <div class="product-card ${this.featured ? 'featured' : ''}">
+        ${this.image ? html`
+          <img
+            class="product-image"
+            src="${this.image}"
+            alt="${this.title}"
+            loading="lazy"
+          />
+        ` : ''}
 
-    .product-card:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--tl-shadow-lg);
-    }
+        ${this.category ? html`
+          <div class="product-category">${this.category}</div>
+        ` : ''}
 
-    .product-card.featured::before {
-      content: 'Destacado';
-      position: absolute;
-      top: var(--tl-spacing-4);
-      right: var(--tl-spacing-4);
-      background: var(--tl-primary-500);
-      color: white;
-      padding: var(--tl-spacing-1) var(--tl-spacing-2);
-      border-radius: var(--tl-spacing-1);
-      font-size: var(--tl-font-size-sm);
-      font-weight: 600;
-    }
+        <h3 class="product-title">${this.title}</h3>
 
-    .product-image {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-      border-radius: var(--tl-spacing-2);
-      margin-bottom: var(--tl-spacing-4);
-    }
+        ${this.description ? html`
+          <p class="product-description">${this.description}</p>
+        ` : ''}
 
-    .product-category {
-      color: var(--tl-primary-500);
-      font-size: var(--tl-font-size-sm);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: var(--tl-spacing-2);
-    }
+        ${this.price ? html`
+          <div class="product-price">${this.price}</div>
+        ` : ''}
 
-    .product-title {
-      font-size: var(--tl-font-size-xl);
-      font-weight: 700;
-      color: var(--tl-neutral-900);
-      margin-bottom: var(--tl-spacing-3);
-      line-height: 1.3;
-    }
+        ${this.link ? html`
+          <a href="${this.link}" class="product-link">
+            ${this.linkText}
+          </a>
+        ` : ''}
+      </div>
+    `;
+  }
+}
 
-    .product-description {
-      color: var(--tl-neutral-600);
-      line-height: 1.5;
+customElements.define('tl-product-card', ProductCard);
+```
+
+#### 1.4 Importar CSS en main.css (Sistema Automático)
+
+```css
+/* src/main.css - El generador agregará automáticamente: */
+@import './components/product-card/product-card.css';
+
+/* Los estilos se optimizan automáticamente por Vite:
+   - Minificación
+   - Tree-shaking
+   - Cache-busting
+   - Prefijos vendor automáticos
+*/
+```
+
+#### **🎯 Ventajas de la Separación CSS (Arquitectura Modernizada)**
+
+**✅ Conversión Lit → PHP mejorada:**
+- Babel AST procesa solo lógica, sin estilos inline complejos
+- PHP generado más limpio y legible
+- Sin conversión problemática de CSS-in-JS
+
+**✅ Optimización WordPress:**
+- CSS se enqueue como archivos separados
+- Mejor caching del navegador
+- Menos JavaScript payload
+
+**✅ Mantenibilidad:**
+- Fácil editar estilos sin tocar lógica
+- Mejor experiencia en IDEs (syntax highlighting)
+- Separation of concerns real
+
+**✅ Performance:**
+- Vite optimiza CSS por separado
+- Critical CSS extraction
+- Mejor Core Web Vitals
+
+**⚠️ Migración desde inline styles:**
+```bash
+# Si tienes componentes con static styles, migrarlos:
+# 1. Mover todo el CSS de static styles = css`` a .css
+# 2. Eliminar import css from 'lit'
+# 3. Regenerar con npm run wp:generate
+```
       margin-bottom: var(--tl-spacing-4);
     }
 
@@ -301,15 +427,50 @@ module.exports = {
 };
 ```
 
-#### 2.2 Generar stories automáticamente
+#### 2.2 Configurar metadata PRIMERO (Nueva Arquitectura)
 
-En lugar de crear el archivo `.stories.js` manualmente, usamos el generador:
+**🎯 CRITICAL: Con la nueva arquitectura Single Source of Truth, PRIMERO debemos configurar metadata.json antes de generar stories:**
 
-```bash
-npm run stories:generate:robust
+```json
+// src/metadata.json (agregar product-card)
+{
+  // ... otros componentes
+  "product-card": {
+    "type": "iterative",
+    "phpFunction": "render_product_card",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "description", "type": "string", "default": "", "escape": "html" },
+      { "name": "price", "type": "string", "default": "", "escape": "html" },
+      { "name": "image", "type": "string", "default": "", "escape": "url" },
+      { "name": "category", "type": "string", "default": "", "escape": "html" },
+      { "name": "featured", "type": "boolean", "default": "false", "escape": "none" },
+      { "name": "link", "type": "string", "default": "", "escape": "url" },
+      { "name": "linkText", "type": "string", "default": "", "escape": "html" }
+    ]
+  }
+}
 ```
 
-Esto generará automáticamente:
+#### 2.3 Generar stories automáticamente desde metadata
+
+**🚀 Ahora el generador usa SOLO metadata.json como fuente única:**
+
+```bash
+# Opción 1: Generar para todos los componentes
+npm run stories:generate:robust
+
+# Opción 2: CLI avanzado - Solo el componente específico (recomendado)
+node src/storybook/generate-stories-robust.js product-card  # Solo product-card
+node src/storybook/generate-stories-robust.js --help       # Ver todas las opciones
+```
+
+**🎯 Ventajas del CLI por componente:**
+- ✅ **Backup automático**: Crea `.backup` antes de sobrescribir
+- ✅ **Velocidad**: Solo regenera el componente que cambió
+- ✅ **Desarrollo iterativo**: Perfecto para ajustar un componente específico
+
+**🎯 El generador usa ConfigSingleton + metadata.json como fuente única:**
 
 ```bash
 🔍 Generador Robusto: Buscando componentes sin stories...
@@ -317,13 +478,29 @@ Esto generará automáticamente:
    - product-card
 
 🎯 Generando stories para: product-card
+🎯 ConfigSingleton.getMetadata() → Leyendo metadata.json
+✅ Componente 'product-card' encontrado en metadata.json
 📦 Usando mocks personalizados para product-card
 ✅ Stories generados: product-card
+   Usando parameters exactos desde metadata.json
 ```
 
-#### 2.3 Story generado automáticamente
+#### 2.4 Story generado con Single Source of Truth
 
-El generador creará el siguiente archivo:
+**✨ Ventajas del nuevo generador:**
+- ✅ **Zero duplication**: Properties exactos desde metadata.json
+- ✅ **Fail-fast**: Error inmediato si componente no está en metadata
+- ✅ **Consistent data**: Same source para WordPress y Storybook
+- ✅ **Auto-controls**: Types mapeados automáticamente (string→text, boolean→boolean)
+
+**⚠️ Fail-Fast en acción - Si olvidas configurar metadata:**
+```bash
+🎯 Generando stories para: product-card
+❌ FAIL FAST: Componente 'product-card' no encontrado en metadata.json
+💡 Solución: Agregar 'product-card' a src/metadata.json con sus parameters
+```
+
+**🔧 Esto garantiza que nunca tengas inconsistencias entre Storybook y WordPress.**
 
 ```javascript
 // src/components/product-card/product-card.stories.js (GENERADO AUTOMÁTICAMENTE)
@@ -332,15 +509,30 @@ import './product-card.js';
 
 export default {
   title: 'Components/Product Card',
-  component: 'tl-product-card',
+  component: 'product-card',
   argTypes: {
-    // Controles generados automáticamente
-    title: { control: 'text', description: 'Tipo: string' },
-    description: { control: 'text', description: 'Tipo: string' },
-    price: { control: 'text', description: 'Tipo: string' },
-    image: { control: 'text', description: 'Tipo: string' },
-    category: { control: 'text', description: 'Tipo: string' },
-    featured: { control: 'boolean', description: 'Tipo: boolean' }
+    // 🎯 Generado desde metadata.json parameters
+    "title": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "description": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "price": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "image": {
+        "control": "text",
+        "description": "Tipo: string. Default: \"\""
+    },
+    "featured": {
+        "control": "boolean",
+        "description": "Tipo: boolean. Default: \"false\""
+    }
+    // ... otros controles generados automáticamente
   },
   parameters: {
     docs: {
@@ -453,61 +645,120 @@ Navega a `http://localhost:6006` y verifica que:
 
 **💡 Ventaja del nuevo sistema**: Sin archivos `.mocks.js`, habrías tenido datos genéricos como "Título del Componente" y arrays vacíos. Con mocks personalizados, tienes datos específicos del dominio que demuestran mejor el propósito real del componente.
 
-### Paso 3: Configurar Metadata - Guía Detallada de Atributos
+### Paso 3: Configurar Metadata (Nueva Arquitectura)
 
-La metadata es el corazón del sistema de generación automática. Define cómo cada componente Lit se convierte en PHP, qué datos consume, y cómo se integra con WordPress.
+Con la nueva arquitectura refactorizada, hemos separado las responsabilidades para mayor cohesión y mantenibilidad.
 
-#### 📚 **ARQUITECTURA UNIFICADA: wordpressData vs dataSource**
+#### 🎯 **NUEVA ARQUITECTURA REFACTORIZADA: Separación Clara de Responsabilidades**
 
-**🔑 CONCEPTO CLAVE**: El sistema usa **DOS niveles de configuración** para máxima flexibilidad:
+**🔑 PRINCIPIO CLAVE**: Single Source of Truth por dominio
 
-##### **1. `dataSource` (en page-templates.json)**
-- **QUÉ datos usar**: Define el TIPO de datos WordPress
-- **NIVEL ALTO**: Configuración de la fuente de datos
-- **UBICACIÓN**: `src/page-templates.json`
-
-```json
-{
-  "page-productos": {
-    "components": [{
-      "name": "product-card",
-      "dataSource": "post"  // ← QUÉ: obtener datos de posts
-    }]
-  }
-}
-```
-
-##### **2. `arrayFields` (en metadata.json)**
-- **QUÉ tipo de campo**: Define el fieldType ESPECÍFICO de cada propiedad
-- **NIVEL DETALLADO**: Configuración de tipos de campo para ACF y validación
-- **UBICACIÓN**: `src/metadata.json`
+##### **📋 `src/metadata.json` - SOLO Metadata de Componentes**
+- **QUÉ**: Escape, estructura, parameters, arrayFields
+- **PROPÓSITO**: Definir cómo funciona el componente internamente
+- **RESPONSIBILITY**: Metadata técnico y validaciones
 
 ```json
 {
   "product-card": {
     "type": "aggregated",
-    "arrayFields": [
-      {"name": "title", "type": "string", "fieldType": "text"},
-      {"name": "price", "type": "string", "fieldType": "text"},
-      {"name": "image", "type": "string", "fieldType": "image"},
-      {"name": "featured", "type": "boolean", "fieldType": "boolean"}
-    ]
+    "parameters": [
+      { "name": "title", "type": "string", "escape": "html" },
+      { "name": "description", "type": "string", "escape": "html" },
+      { "name": "price", "type": "string", "escape": "html" },
+      { "name": "image", "type": "string", "escape": "url" },
+      { "name": "category", "type": "string", "escape": "html" },
+      { "name": "featured", "type": "boolean", "escape": "html" },
+      { "name": "link", "type": "string", "escape": "url" },
+      { "name": "linkText", "type": "string", "escape": "html" }
+    ],
+    "arrayFields": {
+      "products": [
+        { "name": "title", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "price", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "image", "type": "string", "fieldType": "image", "escape": "url" },
+        { "name": "featured", "type": "boolean", "fieldType": "boolean", "escape": "html" }
+      ]
+    }
   }
 }
 ```
 
-##### **🔄 Flujo Completo del Sistema**
+##### **🏗️ `src/page-templates.json` - TODO WordPress**
+- **QUÉ**: postTypes, queries, mappings, SEO, props
+- **PROPÓSITO**: Definir cómo se conecta con WordPress
+- **RESPONSIBILITY**: Configuración WordPress completa
+
+```json
+{
+  "postTypes": {
+    "producto": {
+      "labels": {
+        "name": "Productos",
+        "singular_name": "Producto"
+      },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt", "custom-fields"],
+      "show_in_rest": true
+    }
+  },
+  "page-productos": {
+    "file": "page-productos.php",
+    "title": "Nuestros Productos",
+    "description": "Explora nuestra gama completa de productos y servicios",
+    "seo": {
+      "title": "Productos | Mi Empresa",
+      "description": "Descubre nuestros productos y servicios de alta calidad"
+    },
+    "components": [{
+      "name": "product-card",
+      "dataSource": {
+        "type": "post",
+        "postType": "producto",
+        "query": {
+          "numberposts": -1,
+          "post_status": "publish"
+        },
+        "mapping": {
+          "title": { "source": "post_title", "type": "native" },
+          "description": { "source": "post_excerpt", "type": "native" },
+          "price": { "source": "meta_precio", "type": "acf" },
+          "image": { "source": "post_thumbnail_url", "type": "native" },
+          "category": { "source": "meta_categoria", "type": "acf" },
+          "featured": { "source": "meta_destacado", "type": "acf" },
+          "link": { "source": "post_permalink", "type": "native" },
+          "linkText": { "source": "Ver producto", "type": "static" }
+        }
+      }
+    }]
+  }
+}
+```
+
+##### **🔄 Nuevo Flujo del Sistema Refactorizado**
 
 ```mermaid
 graph TD
-    A[page-templates.json] -->|dataSource.mapping| B[Component Generator]
-    C[metadata.json] -->|arrayFields.fieldType| B
-    B --> D[Código PHP generado]
+    A[page-templates.json] -->|postTypes + dataSource| B[ConfigSingleton]
+    C[metadata.json] -->|escape + parameters| B
+    B --> D[Component Generator]
+    D --> E[PHP con post_type correcto]
+    D --> F[Escape automático aplicado]
+    D --> G[ACF fields auto-generados]
 
-    D --> E[Consulta WordPress: get_posts]
-    D --> F[Mapeo de campos: post_title → title]
-    D --> G[Render del componente con datos reales]
+    E --> H[get_posts con post_type específico]
+    H --> I[Datos reales de WordPress]
+    I --> J[Componente renderizado con seguridad]
 ```
+
+##### **🏗️ Ventajas de la Nueva Arquitectura**
+
+✅ **Cohesión contextual**: postTypes donde se usan (con queries y mappings)
+✅ **Single source por dominio**: metadata.json = escape, page-templates.json = WordPress
+✅ **Mantenibilidad superior**: Un cambio en postType se ve inmediatamente donde se usa
+✅ **Escalabilidad**: Fácil agregar páginas con sus propios postTypes
+✅ **No redundancia**: Eliminada duplicación entre archivos
+✅ **ConfigSingleton**: Source of truth centralizada sin cache
 
 ##### **📋 Ejemplo Completo: Product Card**
 
@@ -1328,14 +1579,16 @@ class ProductCard extends LitElement {
 **Metadata correspondiente:**
 ```json
 "product-card": {
-  "type": "iterative", 
+  "type": "iterative",
   "phpFunction": "render_product_card",
   "parameters": [
-    { "name": "title", "type": "string", "default": "" },
-    { "name": "price", "type": "string", "default": "" },
-    { "name": "category", "type": "string", "default": "" },
-    { "name": "featured", "type": "boolean", "default": false },
-    { "name": "image", "type": "string", "default": "" }
+    { "name": "title", "type": "string", "default": "", "escape": "html" },
+    { "name": "price", "type": "string", "default": "", "escape": "html" },
+    { "name": "category", "type": "string", "default": "", "escape": "html" },
+    { "name": "featured", "type": "boolean", "default": false, "escape": "attr" },
+    { "name": "image", "type": "string", "default": "", "escape": "url" },
+    { "name": "link", "type": "string", "default": "", "escape": "url" },
+    { "name": "linkText", "type": "string", "default": "Ver más", "escape": "html" }
   ],
   "template": "product-card",
   "iteration": {
@@ -1360,16 +1613,77 @@ foreach ($productos as $producto) {
     $precio = get_post_meta($producto->ID, 'precio', true);
     $destacado = (bool)get_post_meta($producto->ID, 'destacado', true);
     $imagen = get_the_post_thumbnail_url($producto->ID);
-    
+
     render_product_card(
         $producto->post_title,
         $precio,
         $categoria,
-        $destacado, 
+        $destacado,
         $imagen
     );
 }
 ```
+
+#### 🧠 **Babel AST: Conversión Inteligente Lit → PHP**
+
+El sistema utiliza **Babel AST** para convertir automáticamente templates Lit a PHP con escape security:
+
+**📋 Proceso de conversión:**
+
+1. **Parse del template Lit** con Babel AST
+2. **Context tracking** para variables de scope
+3. **Metadata lookup** para escape functions
+4. **Generate PHP** con escape automático
+
+**Ejemplo de conversión:**
+
+```javascript
+// Template Lit original
+render() {
+  return html`
+    <div class="product-card ${this.featured ? 'featured' : ''}">
+      <h3>${this.title}</h3>
+      <span>${this.price}</span>
+      <a href="${this.link}">${this.linkText}</a>
+    </div>
+  `;
+}
+```
+
+**🔍 Logs de Babel AST durante generación:**
+```bash
+🔍 AST: Converting product-card with comprehensive context tracking
+🔄 Context: Processing ConditionalExpression in context 'expression_0'
+🔒 Escape aplicado: featured -> esc_attr (metadata:attr)
+🔒 Escape aplicado: title -> esc_html (metadata:html)
+🔒 Escape aplicado: price -> esc_html (metadata:html)
+🔒 Escape aplicado: link -> esc_url (metadata:url)
+🔒 Escape aplicado: linkText -> esc_html (metadata:html)
+```
+
+**📤 PHP generado con escape automático:**
+```php
+function render_product_card($title = '', $price = '', $featured = false, $link = '', $linkText = 'Ver más') {
+    ?>
+    <div class="product-card <?php echo esc_attr($featured ? 'featured' : ''); ?>">
+      <h3><?php echo esc_html($title); ?></h3>
+      <span><?php echo esc_html($price); ?></span>
+      <a href="<?php echo esc_url($link); ?>"><?php echo esc_html($linkText); ?></a>
+    </div>
+    <?php
+}
+```
+
+**🚨 Fail-Fast: Metadata Obligatoria**
+
+Si falta metadata de escape:
+
+```bash
+❌ ESCAPE METADATA FALTANTE: Campo 'newField' en componente 'product-card'
+   no tiene escape metadata declarativo. Actualizar src/metadata.json
+```
+
+**✅ Sin fallbacks**: El sistema falla inmediatamente en lugar de "adivinar" el tipo de escape.
 
 ---
 

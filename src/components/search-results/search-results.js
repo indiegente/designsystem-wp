@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './search-results.css'; // For global Storybook/WordPress styles
+import componentStyles from './search-results.css?inline'; // For Shadow DOM
 
 export class SearchResults extends LitElement {
   static properties = {
@@ -28,7 +30,8 @@ export class SearchResults extends LitElement {
     ];
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   formatResultCount() {
     if (this.totalResults === 0) return '';

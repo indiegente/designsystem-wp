@@ -190,18 +190,29 @@
 
 ## 🔄 **Separación de Responsabilidades: metadata.json vs page-templates.json**
 
-### **metadata.json - Define QUÉ tipo de campo es**
+### **metadata.json - Define QUÉ tipo de campo es + ESCAPE SECURITY**
 ```json
 {
-  "arrayFields": {
-    "testimonials": [
-      { "name": "name", "type": "string", "fieldType": "text" },
-      { "name": "role", "type": "string", "fieldType": "text" },
-      { "name": "content", "type": "string", "fieldType": "textarea" },
-      { "name": "rating", "type": "number", "fieldType": "number" },
-      { "name": "user_photo", "type": "string", "fieldType": "image" },
-      { "name": "course", "type": "string", "fieldType": "text" }
+  "hero-section": {
+    "type": "static",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "", "escape": "html" },
+      { "name": "link", "type": "string", "default": "", "escape": "url" },
+      { "name": "linkText", "type": "string", "default": "", "escape": "html" }
     ]
+  },
+  "testimonials": {
+    "type": "aggregated",
+    "arrayFields": {
+      "testimonials": [
+        { "name": "name", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "role", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "content", "type": "string", "fieldType": "textarea", "escape": "html" },
+        { "name": "rating", "type": "number", "fieldType": "number", "escape": "html" },
+        { "name": "user_photo", "type": "string", "fieldType": "image", "escape": "url" },
+        { "name": "course", "type": "string", "fieldType": "text", "escape": "html" }
+      ]
+    }
   }
 }
 ```
@@ -220,12 +231,40 @@
 }
 ```
 
+### **🔒 Sistema de Escape Metadata-Driven**
+
+El generador Babel AST aplica escape automático usando la metadata:
+
+```javascript
+// Babel AST detecta this.title en template Lit
+🔍 AST: Processing MemberExpression 'title'
+📋 Consultando metadata escape para 'title' en 'hero-section'
+🔒 Escape aplicado: title -> esc_html (metadata:html)
+
+// PHP generado automáticamente:
+<?php echo esc_html($title); ?>
+```
+
+### **🚨 Fail-Fast: Metadata Obligatoria**
+
+```javascript
+// Si falta metadata escape:
+❌ ESCAPE METADATA FALTANTE: Campo 'newField' en componente 'hero-section'
+   no tiene escape metadata declarativo. Actualizar src/metadata.json
+
+// Si falta arrayFields:
+❌ ARRAY FIELD ESCAPE METADATA FALTANTE: Campo 'url' en arrays de componente 'features'
+   no tiene escape metadata declarativo. Actualizar arrayFields en src/metadata.json
+```
+
 ### **Beneficios de esta separación:**
-- ✅ **metadata.json**: Información intrínseca del componente (tipos, estructura)
+- ✅ **metadata.json**: Información intrínseca del componente (tipos, estructura, **escape security**)
 - ✅ **page-templates.json**: Configuración de datos específica por página
-- ✅ **No duplicación**: fieldType una sola vez en metadata
+- ✅ **No duplicación**: fieldType y escape una sola vez en metadata
 - ✅ **Reutilización**: Un componente puede usar diferentes fuentes de datos
-- ✅ **Mantenimiento**: Cambios de tipos centralizados
+- ✅ **Seguridad garantizada**: Babel AST aplica escape automático
+- ✅ **Fail-fast**: Sin fallbacks, errores claros si falta metadata
+- ✅ **Mantenimiento**: Cambios de tipos y security centralizados
 
 ### **Manejo Automático de Imágenes**
 Cuando `fieldType: "image"` en metadata.json, el generador aplica automáticamente:

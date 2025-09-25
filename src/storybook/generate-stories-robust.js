@@ -9,26 +9,27 @@
 
 const fs = require('fs');
 const path = require('path');
+const ConfigSingleton = require('../../scripts/wp-generator/core/config-singleton');
 
 class RobustStoryGenerator {
   constructor() {
-    this.componentsDir = path.join(process.cwd(), 'src', 'components');
-    this.metadata = this.loadMetadata();
+    // 🎯 SINGLE SOURCE OF TRUTH: ConfigSingleton
+    this.config = ConfigSingleton.getInstance();
+    this.componentsDir = path.join(process.cwd(), this.config.getFullConfig().paths.components);
     this.errors = [];
     this.warnings = [];
   }
 
-  loadMetadata() {
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Usar ConfigSingleton.getMetadata()
+   * NO leer archivos directamente - fail fast si no existe
+   */
+  getMetadata() {
     try {
-      const metadataPath = path.join(process.cwd(), 'src', 'component-metadata.json');
-      if (fs.existsSync(metadataPath)) {
-        const content = fs.readFileSync(metadataPath, 'utf8');
-        return JSON.parse(content);
-      }
+      return this.config.getMetadata();
     } catch (error) {
-      this.addError('metadata', `Error cargando metadata: ${error.message}`);
+      throw new Error(`❌ FAIL FAST: ${error.message}`);
     }
-    return {};
   }
 
   findComponentsWithoutStories() {
@@ -67,31 +68,39 @@ class RobustStoryGenerator {
 
   analyzeComponent(componentName) {
     const componentPath = path.join(this.componentsDir, componentName, `${componentName}.js`);
-    
+
     try {
+      if (!fs.existsSync(componentPath)) {
+        throw new Error(`❌ FAIL FAST: Componente no encontrado: ${componentPath}`);
+      }
+
       const content = fs.readFileSync(componentPath, 'utf8');
-      
+
       // Validar que el archivo sea válido JavaScript
       this.validateJavaScript(content, componentName);
-      
-      // Extraer información del componente
-      const properties = this.extractPropertiesRobust(content, componentName);
-      const metadata = this.metadata[componentName];
+
+      // 🎯 SINGLE SOURCE OF TRUTH: Usar solo metadata.json
+      const metadata = this.getMetadata();
+      const componentMeta = metadata[componentName];
+
+      if (!componentMeta) {
+        throw new Error(`❌ FAIL FAST: Componente '${componentName}' no encontrado en metadata.json`);
+      }
+
       const className = this.extractClassNameRobust(content, componentName);
       const tagName = this.extractTagNameRobust(content, componentName);
-      
-      // Validaciones adicionales
-      this.validateComponentInfo(componentName, className, tagName, properties);
-      
+
+      // Validaciones usando metadata como fuente única
+      this.validateComponentInfo(componentName, className, tagName, componentMeta);
+
       return {
         name: componentName,
-        properties,
-        metadata,
+        metadata: componentMeta,
         className,
         tagName,
         isValid: this.errors.filter(e => e.component === componentName).length === 0
       };
-      
+
     } catch (error) {
       this.addError(componentName, `Error analizando componente: ${error.message}`);
       return null;
@@ -122,235 +131,10 @@ class RobustStoryGenerator {
     }
   }
 
-  extractPropertiesRobust(content, componentName) {
-    const properties = {};
-    
-    try {
-      // Método 1: static properties = {...}
-      const staticPropsMatch = content.match(/static\s+properties\s*=\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/s);
-      if (staticPropsMatch) {
-        return this.parsePropertiesObject(staticPropsMatch[1], componentName);
-      }
-      
-      // Método 2: static get properties() {...}
-      const getterMatch = content.match(/static\s+get\s+properties\(\)\s*\{[^}]*return\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/s);
-      if (getterMatch) {
-        this.addWarning(componentName, 'Usa getter pattern para properties - convierte a static properties');
-        return this.parsePropertiesObject(getterMatch[1], componentName);
-      }
-      
-      // Método 3: Buscar en herencia/mixins
-      const superPropsMatch = content.match(/\.\.\.super\.properties,\s*([^}]*)/s);
-      if (superPropsMatch) {
-        this.addWarning(componentName, 'Usa herencia de properties - solo se analizarán properties propias');
-        return this.parsePropertiesObject(superPropsMatch[1], componentName);
-      }
-      
-    } catch (error) {
-      this.addError(componentName, `Error extrayendo properties: ${error.message}`);
-    }
-    
-    // Si no encuentra properties, buscar valores por defecto en constructor
-    return this.extractConstructorDefaults(content, componentName);
-  }
-
-  parsePropertiesObject(propertiesString, componentName) {
-    const properties = {};
-    
-    try {
-      // Limpiar comentarios
-      const cleanString = this.removeComments(propertiesString);
-      
-      // Extraer propiedades individuales con regex mejorado
-      const propertyRegex = /(['"']?[\w\-]+['"]?)\s*:\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g;
-      let match;
-      
-      while ((match = propertyRegex.exec(cleanString)) !== null) {
-        const [, rawPropName, propConfig] = match;
-        
-        // Limpiar nombre de propiedad
-        const propName = this.cleanPropertyName(rawPropName, componentName);
-        if (!propName) continue;
-        
-        // Parsear configuración de la propiedad
-        const propInfo = this.parsePropertyConfig(propConfig, propName, componentName);
-        if (propInfo) {
-          properties[propName] = propInfo;
-        }
-      }
-      
-      // Fallback: buscar propiedades simples sin configuración
-      if (Object.keys(properties).length === 0) {
-        const simpleRegex = /(['"']?[\w\-]+['"]?)\s*:\s*\{\s*\}/g;
-        while ((match = simpleRegex.exec(cleanString)) !== null) {
-          const propName = this.cleanPropertyName(match[1], componentName);
-          if (propName) {
-            properties[propName] = { type: 'String', control: 'text' };
-            this.addWarning(componentName, `Property ${propName} sin type definido, asumiendo String`);
-          }
-        }
-      }
-      
-    } catch (error) {
-      this.addError(componentName, `Error parseando properties: ${error.message}`);
-    }
-    
-    return properties;
-  }
-
-  removeComments(str) {
-    // Remover comentarios de línea y bloque
-    return str
-      .replace(/\/\*[\s\S]*?\*\//g, '') // Comentarios de bloque
-      .replace(/\/\/.*$/gm, '');        // Comentarios de línea
-  }
-
-  cleanPropertyName(rawName, componentName) {
-    // Remover comillas
-    let name = rawName.replace(/['"]/g, '').trim();
-    
-    // Validar nombre
-    if (!name) {
-      this.addWarning(componentName, 'Property con nombre vacío ignorada');
-      return null;
-    }
-    
-    // Advertir sobre nombres problemáticos
-    const problematicNames = ['constructor', 'prototype', 'className', '__proto__'];
-    if (problematicNames.includes(name)) {
-      this.addWarning(componentName, `Property '${name}' es una palabra reservada`);
-    }
-    
-    if (name.startsWith('__')) {
-      this.addWarning(componentName, `Property '${name}' parece privada`);
-    }
-    
-    if (/^\d/.test(name)) {
-      this.addWarning(componentName, `Property '${name}' empieza con número`);
-    }
-    
-    if (name.includes('-') && !name.startsWith('data-')) {
-      this.addWarning(componentName, `Property '${name}' contiene guiones`);
-    }
-    
-    return name;
-  }
-
-  parsePropertyConfig(configString, propName, componentName) {
-    const config = { type: 'String', control: 'text' };
-    
-    try {
-      // Buscar type
-      const typeMatch = configString.match(/type\s*:\s*(\w+)/);
-      if (typeMatch) {
-        const rawType = typeMatch[1];
-        config.type = this.normalizeType(rawType, propName, componentName);
-        config.control = this.getControlType(config.type);
-      } else {
-        this.addWarning(componentName, `Property '${propName}' sin type definido`);
-      }
-      
-      // Detectar state properties (no deberían ir en stories)
-      if (configString.includes('state:') && configString.includes('true')) {
-        this.addWarning(componentName, `Property '${propName}' es state - podría no ser apropiada para stories`);
-        return null; // No incluir state properties
-      }
-      
-      // Detectar noAccessor
-      if (configString.includes('noAccessor:') && configString.includes('true')) {
-        this.addWarning(componentName, `Property '${propName}' tiene noAccessor - verificar si es apropiada para stories`);
-      }
-      
-      // Detectar converters personalizados
-      if (configString.includes('converter:')) {
-        this.addWarning(componentName, `Property '${propName}' tiene converter personalizado`);
-      }
-      
-    } catch (error) {
-      this.addError(componentName, `Error parseando config de property '${propName}': ${error.message}`);
-    }
-    
-    return config;
-  }
-
-  normalizeType(rawType, propName, componentName) {
-    const typeMap = {
-      'String': 'String',
-      'Number': 'Number',
-      'Boolean': 'Boolean',
-      'Array': 'Array',
-      'Object': 'Object',
-      'Function': 'Function',
-      'Date': 'Date'
-    };
-    
-    if (typeMap[rawType]) {
-      return typeMap[rawType];
-    }
-    
-    // Types problemáticos
-    const problematicTypes = ['Function', 'WeakMap', 'WeakSet', 'Symbol', 'BigInt'];
-    if (problematicTypes.includes(rawType)) {
-      this.addWarning(componentName, `Property '${propName}' usa type problemático '${rawType}'`);
-      return 'Object'; // Fallback seguro
-    }
-    
-    // Types de terceros
-    if (!['String', 'Number', 'Boolean', 'Array', 'Object'].includes(rawType)) {
-      this.addWarning(componentName, `Property '${propName}' usa type no estándar '${rawType}' - tratado como Object`);
-      return 'Object';
-    }
-    
-    return rawType;
-  }
-
-  extractConstructorDefaults(content, componentName) {
-    const properties = {};
-    
-    try {
-      const constructorMatch = content.match(/constructor\(\)\s*\{([^}]*)\}/s);
-      if (!constructorMatch) return properties;
-      
-      const constructorBody = constructorMatch[1];
-      const assignmentRegex = /this\.(\w+)\s*=\s*([^;]+);/g;
-      let match;
-      
-      while ((match = assignmentRegex.exec(constructorBody)) !== null) {
-        const [, propName, value] = match;
-        
-        // Ignorar propiedades privadas
-        if (propName.startsWith('_')) continue;
-        
-        const type = this.inferTypeFromValue(value.trim());
-        properties[propName] = {
-          type,
-          control: this.getControlType(type),
-          detectedIn: 'constructor'
-        };
-        
-        this.addWarning(componentName, `Property '${propName}' detectada solo en constructor`);
-      }
-      
-    } catch (error) {
-      this.addError(componentName, `Error extrayendo defaults del constructor: ${error.message}`);
-    }
-    
-    return properties;
-  }
-
-  inferTypeFromValue(value) {
-    // Remover espacios y comillas
-    value = value.trim();
-    
-    if (value === 'true' || value === 'false') return 'Boolean';
-    if (/^\d+$/.test(value)) return 'Number';
-    if (/^\d+\.\d+$/.test(value)) return 'Number';
-    if (value.startsWith('[') && value.endsWith(']')) return 'Array';
-    if (value.startsWith('{') && value.endsWith('}')) return 'Object';
-    if (value.startsWith("'") || value.startsWith('"')) return 'String';
-    
-    return 'String'; // Default fallback
-  }
+  /**
+   * ❌ ELIMINADO: extractPropertiesRobust, parsePropertiesObject, etc.
+   * 🎯 SINGLE SOURCE OF TRUTH: Solo usar metadata.json via ConfigSingleton
+   */
 
   extractClassNameRobust(content, componentName) {
     try {
@@ -395,20 +179,20 @@ class RobustStoryGenerator {
     }
   }
 
-  validateComponentInfo(componentName, className, tagName, properties) {
+  validateComponentInfo(componentName, className, tagName, componentMeta) {
     // Validar que el className sea válido
     if (!className || !/^[A-Z][a-zA-Z0-9]*$/.test(className)) {
       this.addWarning(componentName, `Nombre de clase '${className}' no sigue convenciones`);
     }
-    
+
     // Validar que el tagName sea válido
     if (!tagName || !tagName.includes('-')) {
       this.addWarning(componentName, `Tag name '${tagName}' debería contener al menos un guión`);
     }
-    
-    // Validar que tenga al menos una property
-    if (Object.keys(properties).length === 0) {
-      this.addWarning(componentName, 'Componente sin properties detectadas');
+
+    // Validar metadata obligatoria
+    if (!componentMeta.parameters || componentMeta.parameters.length === 0) {
+      throw new Error(`❌ FAIL FAST: Componente '${componentName}' sin parameters en metadata.json`);
     }
   }
 
@@ -429,13 +213,13 @@ class RobustStoryGenerator {
     if (!componentInfo.isValid) {
       return this.generateFallbackStory(componentInfo);
     }
-    
-    const { name, properties, metadata, tagName } = componentInfo;
-    
-    // Usar el generador original pero con validaciones
-    const defaultArgs = this.generateDefaultArgsRobust(properties, metadata, name);
-    const argTypes = this.generateArgTypesRobust(properties, metadata, name);
-    
+
+    const { name, metadata, tagName } = componentInfo;
+
+    // 🎯 SINGLE SOURCE OF TRUTH: Usar solo metadata
+    const defaultArgs = this.generateDefaultArgsFromMetadata(metadata, name);
+    const argTypes = this.generateArgTypesFromMetadata(metadata, name);
+
     return `import '../../design-system.stories.js';
 import './${name}.js';
 
@@ -471,14 +255,14 @@ ${this.generateWarningsSection(name)}
 
 const Template = (args) => {
   const element = document.createElement('${tagName}');
-  ${this.generateElementPropertyAssignments(properties, name)}
+  ${this.generateElementPropertyAssignmentsFromMetadata(metadata, name)}
   return element;
 };
 
 export const Default = Template.bind({});
 Default.args = ${JSON.stringify(defaultArgs, null, 2)};
 
-${this.generateVariantStoriesRobust(name, metadata, properties)}
+${this.generateVariantStoriesFromMetadata(name, metadata)}
 `;
   }
 
@@ -532,38 +316,26 @@ Default.args = {
 `;
   }
 
-  generateDefaultArgsRobust(properties, metadata, componentName) {
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Generar args desde metadata.json únicamente
+   */
+  generateDefaultArgsFromMetadata(metadata, componentName) {
+    if (!metadata.parameters) {
+      throw new Error(`❌ FAIL FAST: Componente '${componentName}' sin parameters en metadata.json`);
+    }
+
     // 1. Priorizar mocks personalizados del desarrollador
     const customMocks = this.loadCustomMocks(componentName);
     if (customMocks && customMocks.defaultArgs) {
       return customMocks.defaultArgs;
     }
-    
-    // 2. Priorizar metadata si existe
-    if (metadata && metadata.parameters) {
-      const args = {};
-      metadata.parameters.forEach(param => {
-        args[param.name] = this.generateExampleValueSafe(param.type, param.name);
-      });
-      return args;
-    }
-    
-    // 3. Usar properties detectadas
+
+    // 2. Usar metadata.parameters como fuente única
     const args = {};
-    Object.keys(properties).forEach(prop => {
-      const propInfo = properties[prop];
-      args[prop] = this.generateExampleValueSafe(propInfo.type, prop);
+    metadata.parameters.forEach(param => {
+      args[param.name] = this.generateExampleValueSafe(param.type, param.name);
     });
-    
-    // 4. Si no hay properties, valores genéricos
-    if (Object.keys(args).length === 0) {
-      this.addWarning(componentName, 'Usando args genéricos por falta de properties');
-      return {
-        title: 'Título de ejemplo',
-        content: 'Contenido de ejemplo'
-      };
-    }
-    
+
     return args;
   }
 
@@ -685,102 +457,59 @@ Default.args = {
     }
   }
 
-  generateArgTypesRobust(properties, metadata, componentName) {
-    const argTypes = {};
-    
-    try {
-      const props = metadata?.parameters || Object.keys(properties).map(key => ({
-        name: key,
-        type: properties[key].type?.toLowerCase() || 'string'
-      }));
-
-      props.forEach(prop => {
-        const propInfo = properties[prop.name] || {};
-        argTypes[prop.name] = {
-          control: propInfo.control || this.getControlType(prop.type)
-        };
-        
-        // Agregar descripción
-        if (metadata?.parameters) {
-          const metaProp = metadata.parameters.find(p => p.name === prop.name);
-          if (metaProp) {
-            argTypes[prop.name].description = `Tipo: ${metaProp.type}. Default: "${metaProp.default}"`;
-          }
-        } else if (propInfo.detectedIn) {
-          argTypes[prop.name].description = `Detectado en: ${propInfo.detectedIn}`;
-        }
-      });
-    } catch (error) {
-      this.addError(componentName, `Error generando argTypes: ${error.message}`);
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Generar argTypes desde metadata.json únicamente
+   */
+  generateArgTypesFromMetadata(metadata, componentName) {
+    if (!metadata.parameters) {
+      throw new Error(`❌ FAIL FAST: Componente '${componentName}' sin parameters en metadata.json`);
     }
-    
+
+    const argTypes = {};
+
+    metadata.parameters.forEach(param => {
+      argTypes[param.name] = {
+        control: this.getControlType(param.type)
+      };
+
+      // Descripción basada en metadata
+      if (param.default !== undefined) {
+        argTypes[param.name].description = `Tipo: ${param.type}. Default: "${param.default}"`;
+      }
+    });
+
     return argTypes;
   }
 
-  generateTemplateAttributesRobust(properties, componentName) {
-    try {
-      const props = Object.keys(properties);
-      
-      if (props.length === 0) {
-        // Fallback genérico
-        return '.title=${args.title || ""}\n    .content=${args.content || ""}';
-      }
-
-      return props
-        .map(prop => {
-          const propInfo = properties[prop];
-          const type = propInfo.type;
-          
-          if (type === 'Boolean') {
-            return `?${prop}=\${args.${prop}}`;
-          } else if (type === 'Array' || type === 'Object') {
-            return `.${prop}=\${args.${prop}}`;
-          } else {
-            return `.${prop}=\${args.${prop}}`;
-          }
-        })
-        .join('\n    ');
-    } catch (error) {
-      this.addError(componentName, `Error generando template attributes: ${error.message}`);
-      return '.title=${args.title || ""}';
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Generar property assignments desde metadata.json
+   */
+  generateElementPropertyAssignmentsFromMetadata(metadata, componentName) {
+    if (!metadata.parameters) {
+      throw new Error(`❌ FAIL FAST: Componente '${componentName}' sin parameters en metadata.json`);
     }
+
+    return metadata.parameters
+      .map(param => `element.${param.name} = args.${param.name};`)
+      .join('\n  ');
   }
 
-  generateElementPropertyAssignments(properties, componentName) {
-    try {
-      const props = Object.keys(properties);
-      
-      if (props.length === 0) {
-        // Fallback genérico
-        return `element.title = args.title || '';
-  element.content = args.content || '';`;
-      }
-
-      return props
-        .map(prop => {
-          const propInfo = properties[prop];
-          return `element.${prop} = args.${prop};`;
-        })
-        .join('\n  ');
-    } catch (error) {
-      this.addError(componentName, `Error generando property assignments: ${error.message}`);
-      return 'element.title = args.title || "";';
-    }
-  }
-
-  generateVariantStoriesRobust(name, metadata, properties) {
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Generar variantes desde metadata.json y mocks
+   */
+  generateVariantStoriesFromMetadata(name, metadata) {
     let stories = '';
-    
+
     try {
       // Cargar mocks personalizados para variantes
       const customMocks = this.loadCustomMocks(name);
-      
+
       if (customMocks && customMocks.variants) {
         // Usar variantes personalizadas
         Object.keys(customMocks.variants).forEach(variantName => {
           const variantData = customMocks.variants[variantName];
           const capitalizedName = this.toPascalCase(variantName);
-          
+
           stories += `
 export const ${capitalizedName} = Template.bind({});
 ${capitalizedName}.args = ${JSON.stringify(variantData, null, 2)};
@@ -794,15 +523,15 @@ Minimal.args = {
   title: "Ejemplo Mínimo"
 };
 `;
-        
-        // Historia con datos (solo si es apropiado)
-        if (metadata?.type === 'aggregated' || Object.keys(properties).some(p => 
-            ['testimonials', 'features', 'items', 'data'].includes(p.toLowerCase()))) {
-          stories += this.generateWithDataStory(name, metadata);
+
+        // Historia con datos basada en metadata type
+        if (metadata?.type === 'aggregated') {
+          stories += this.generateWithDataStoryFromMetadata(name, metadata);
         }
-        
-        // Historia destacada (si tiene property featured)
-        if (Object.keys(properties).some(p => p.toLowerCase() === 'featured')) {
+
+        // Historia destacada si tiene parameter featured en metadata
+        const hasFeatured = metadata.parameters?.some(p => p.name.toLowerCase() === 'featured');
+        if (hasFeatured) {
           stories += `
 export const Featured = Template.bind({});
 Featured.args = {
@@ -812,15 +541,18 @@ Featured.args = {
 `;
         }
       }
-      
+
     } catch (error) {
       this.addWarning(name, `Error generando variant stories: ${error.message}`);
     }
-    
+
     return stories;
   }
 
-  generateWithDataStory(name, metadata) {
+  /**
+   * 🎯 SINGLE SOURCE OF TRUTH: Generar historias con datos desde metadata
+   */
+  generateWithDataStoryFromMetadata(name) {
     if (name.includes('testimonials') || name.includes('testimonio')) {
       return `
 export const WithTestimonials = Template.bind({});
@@ -833,7 +565,7 @@ WithTestimonials.args = {
 };
 `;
     }
-    
+
     if (name.includes('feature') || name.includes('grid')) {
       return `
 export const WithFeatures = Template.bind({});
@@ -847,7 +579,7 @@ WithFeatures.args = {
 };
 `;
     }
-    
+
     return `
 export const WithData = Template.bind({});
 WithData.args = {
@@ -934,12 +666,69 @@ WithData.args = {
     ).join(' ');
   }
 
+  /**
+   * 🎯 Generar story para un componente específico
+   */
+  async generateSingleStory(componentName) {
+    console.log(`🎯 Generando story para componente específico: ${componentName}`);
+
+    // Verificar que el componente exista
+    const componentPath = path.join(this.componentsDir, componentName, `${componentName}.js`);
+    if (!fs.existsSync(componentPath)) {
+      throw new Error(`❌ FAIL FAST: Componente '${componentName}' no encontrado en ${componentPath}`);
+    }
+
+    // Analizar y generar
+    const componentInfo = this.analyzeComponent(componentName);
+    if (!componentInfo) {
+      throw new Error(`❌ FAIL FAST: No se pudo analizar el componente '${componentName}'`);
+    }
+
+    const storyContent = this.generateStoryContent(componentInfo);
+
+    const storiesPath = path.join(
+      this.componentsDir,
+      componentName,
+      `${componentName}.stories.js`
+    );
+
+    // Crear backup si existe
+    if (fs.existsSync(storiesPath)) {
+      const backupPath = `${storiesPath}.backup`;
+      fs.copyFileSync(storiesPath, backupPath);
+      console.log(`📦 Backup creado: ${componentName}.stories.js.backup`);
+    }
+
+    fs.writeFileSync(storiesPath, storyContent);
+
+    if (componentInfo.isValid) {
+      console.log(`✅ Story generado exitosamente: ${componentName}`);
+    } else {
+      console.log(`⚠️ Story generado con fallback: ${componentName}`);
+    }
+
+    // Mostrar warnings si existen
+    const warnings = this.getComponentWarnings(componentName);
+    if (warnings.length > 0) {
+      console.log(`   Advertencias (${warnings.length}):`);
+      warnings.forEach(w => console.log(`     - ${w.message}`));
+    }
+
+    return {
+      success: componentInfo.isValid,
+      generated: 1,
+      failed: componentInfo.isValid ? 0 : 1,
+      errors: this.getComponentErrors(componentName),
+      warnings: this.getComponentWarnings(componentName)
+    };
+  }
+
   // Método principal
   async generateStories() {
     console.log('🔍 Generador Robusto: Buscando componentes sin stories...');
-    
+
     const componentsWithoutStories = this.findComponentsWithoutStories();
-    
+
     if (componentsWithoutStories.length === 0) {
       console.log('✅ Todos los componentes ya tienen stories!');
       return { success: true, generated: 0, errors: [], warnings: [] };
@@ -953,41 +742,41 @@ WithData.args = {
 
     for (const componentName of componentsWithoutStories) {
       console.log(`\n🎯 Generando stories para: ${componentName}`);
-      
+
       try {
         const componentInfo = this.analyzeComponent(componentName);
-        
+
         if (!componentInfo) {
           console.log(`❌ No se pudo analizar: ${componentName}`);
           failed++;
           continue;
         }
-        
+
         const storyContent = this.generateStoryContent(componentInfo);
-        
+
         const storiesPath = path.join(
-          this.componentsDir, 
-          componentName, 
+          this.componentsDir,
+          componentName,
           `${componentName}.stories.js`
         );
-        
+
         fs.writeFileSync(storiesPath, storyContent);
-        
+
         if (componentInfo.isValid) {
           console.log(`✅ Stories generados: ${componentName}`);
         } else {
           console.log(`⚠️ Stories generados con fallback: ${componentName}`);
         }
-        
+
         generated++;
-        
+
         // Mostrar warnings para este componente
         const warnings = this.getComponentWarnings(componentName);
         if (warnings.length > 0) {
           console.log(`   Advertencias (${warnings.length}):`);
           warnings.forEach(w => console.log(`     - ${w.message}`));
         }
-        
+
       } catch (error) {
         console.error(`❌ Error generando stories para ${componentName}:`, error.message);
         failed++;
@@ -1022,9 +811,45 @@ WithData.args = {
 // Ejecutar si se llama directamente
 if (require.main === module) {
   const generator = new RobustStoryGenerator();
-  generator.generateStories()
+
+  // Parsear argumentos de línea de comandos
+  const args = process.argv.slice(2);
+  const componentName = args[0];
+
+  // Mostrar ayuda si se solicita
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+🧩 Generador Robusto de Stories - Single Source of Truth
+
+📋 Uso:
+  node generate-stories-robust.js [componente]     # Generar para componente específico
+  node generate-stories-robust.js                  # Generar para todos los componentes sin stories
+
+🎯 Ejemplos:
+  node generate-stories-robust.js hero-section     # Solo hero-section
+  node generate-stories-robust.js course-card      # Solo course-card
+
+✨ Características:
+  • Single Source of Truth: Usa SOLO metadata.json via ConfigSingleton
+  • Fail-fast: Error claro si componente no está en metadata
+  • Backup automático: Crea .backup antes de sobrescribir
+  • Mocks personalizados: Soporte para archivos .mocks.js
+    `);
+    process.exit(0);
+  }
+
+  // Generar para componente específico o todos
+  const task = componentName
+    ? generator.generateSingleStory(componentName)
+    : generator.generateStories();
+
+  task
     .then(result => {
       if (result.success) {
+        console.log(componentName
+          ? `\n🎉 Story para '${componentName}' generado exitosamente!`
+          : `\n🎉 Generación completada exitosamente!`
+        );
         process.exit(0);
       } else {
         console.log('\n🚨 Generación completada con errores.');

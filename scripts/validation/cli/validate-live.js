@@ -2,7 +2,6 @@
 
 const { ValidationEngine } = require('../core/validation-engine');
 const HTMLSource = require('../sources/html-source');
-const ConfigSource = require('../sources/config-source');
 
 // Validators
 const SEOValidator = require('../validators/seo-validator');
@@ -22,6 +21,18 @@ class LiveValidationCLI {
   }
 
   /**
+   * Generar URLs básicas de test
+   */
+  generateBasicTestUrls() {
+    return [
+      { url: `${this.baseUrl}/`, name: 'home', description: 'Página principal' },
+      { url: `${this.baseUrl}/carreras`, name: 'carreras', description: 'Página de carreras' },
+      { url: `${this.baseUrl}/contacto`, name: 'contacto', description: 'Página de contacto' },
+      { url: `${this.baseUrl}/test-showcase`, name: 'test-showcase', description: 'Página de pruebas' }
+    ];
+  }
+
+  /**
    * Ejecuta validación completa de URLs
    */
   async run() {
@@ -32,12 +43,8 @@ class LiveValidationCLI {
     console.log('');
 
     try {
-      // 1. Cargar configuraciones del proyecto
-      const configSource = ConfigSource.create();
-      const configs = await configSource.prepare({});
-
-      // 2. Generar URLs de test
-      const testUrls = await configSource.getTestUrls(this.baseUrl);
+      // 1. Generar URLs básicas de test
+      const testUrls = this.generateBasicTestUrls();
       console.log(`📋 URLs a validar: ${testUrls.length}`);
       console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 

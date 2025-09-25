@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './error-404.css'; // For global Storybook/WordPress styles
+import componentStyles from './error-404.css?inline'; // For Shadow DOM
 
 export class Error404 extends LitElement {
   static properties = {
@@ -30,7 +32,8 @@ export class Error404 extends LitElement {
     ];
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   handleSearch(e) {
     e.preventDefault();

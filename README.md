@@ -56,14 +56,110 @@ npm run storybook             # Documentación interactiva
 npm run build-storybook       # Build de Storybook
 ```
 
-### 🧩 **Storybook Stories**
+### 📚 **Storybook Stories - Single Source of Truth**
 ```bash
-npm run stories:generate      # Generar stories básicas
-npm run stories:generate:robust # Generar stories robustas
-npm run stories:test          # Test del generador de stories
+# Stories generation usando SOLO metadata.json como fuente única
+npm run stories:generate:robust                    # Generar para todos los componentes
+npm run storybook                                  # Ver documentación interactiva
+npm run build-storybook                            # Build documentación para producción
+
+# CLI avanzado para componentes específicos
+npm run stories:single [componente]                        # Script npm (más fácil)
+node src/storybook/generate-stories-robust.js [componente]  # Comando directo
+node src/storybook/generate-stories-robust.js --help       # Ver ayuda completa
 ```
 
-## 🏗️ Arquitectura Modernizada
+**🎯 CLI Parameters:**
+```bash
+# Generar story para componente específico (con backup automático)
+npm run stories:single hero-section        # Script npm (recomendado)
+npm run stories:single course-card         # Más fácil de recordar
+node src/storybook/generate-stories-robust.js hero-section  # Comando directo
+
+# Generar para todos los componentes sin stories
+npm run stories:generate:robust
+node src/storybook/generate-stories-robust.js
+
+# Mostrar ayuda completa
+node src/storybook/generate-stories-robust.js --help
+```
+
+**🎯 Características del nuevo generador:**
+- ✅ **Single source of truth**: Solo usa `metadata.json` via ConfigSingleton
+- ❌ **Sin extracción JavaScript**: No lee properties de archivos .js
+- ✅ **Fail-fast estricto**: Error claro si componente no está en metadata
+- ✅ **Mocks personalizados**: Soporta archivos `.mocks.js` opcionales
+- ✅ **Backup automático**: Crea `.backup` antes de sobrescribir stories existentes
+- ✅ **Componente específico**: Regenera solo el componente que necesites
+
+## 🏗️ Arquitectura Modernizada - Single Source of Truth
+
+### **🎯 Nueva Arquitectura Refactorizada (2024)**
+
+**Separación de responsabilidades optimizada:**
+
+- **`metadata.json`**: Solo metadatos de componentes (escape, parameters, arrayFields)
+- **`page-templates.json`**: WordPress data completo (postTypes, queries, mappings, SEO)
+- **ConfigSingleton**: Fuente única de verdad centralizada sin cache
+
+## 🎨 ARQUITECTURA CSS HÍBRIDA CRÍTICA
+
+### **⚠️ REGLAS OBLIGATORIAS CSS - PERFORMANCE CRÍTICA**
+
+**🚨 NUNCA hacer esto:**
+```javascript
+// ❌ PROHIBIDO: Inline styles en componentes Lit
+static styles = css`
+  .hero { background: blue; padding: 20px; }
+`;
+```
+
+**✅ SIEMPRE hacer esto:**
+```javascript
+// ✅ CORRECTO: CSS en archivos separados
+import { LitElement, html, css } from 'lit';
+import './hero-section.css'; // Para desarrollo individual
+
+export class HeroSection extends LitElement {
+  static styles = css``; // Vacío - estilos en archivo separado
+}
+```
+
+### **🎯 Arquitectura CSS Híbrida Optimizada:**
+
+**1. Para WordPress (Performance Crítica):**
+- **`src/main.css`** - Archivo unificado con TODOS los componentes
+- **Vite build** - Optimiza, minifica, tree-shaking automático
+- **Core Web Vitals** - Un solo archivo CSS para máximo rendimiento
+
+**2. Para Storybook (Documentación):**
+- **`.storybook/preview.js`** - Importa `main.css` globalmente
+- **Estilos unificados** - Todos los componentes se ven correctamente
+
+**3. Para Desarrollo Individual:**
+- **`component.css`** - Archivos separados para cada componente
+- **Import individual** - `import './component.css'` en cada .js
+
+### **📋 Flujo OBLIGATORIO para nuevos componentes:**
+
+```bash
+# 1. Crear componente con CSS separado
+mkdir src/components/mi-componente
+touch src/components/mi-componente/mi-componente.js
+touch src/components/mi-componente/mi-componente.css   # ← OBLIGATORIO
+
+# 2. Agregar import en main.css (CRÍTICO PARA PERFORMANCE)
+echo "@import './components/mi-componente/mi-componente.css';" >> src/main.css
+
+# 3. Importar CSS en componente Lit
+echo "import './mi-componente.css';" >> src/components/mi-componente/mi-componente.js
+```
+
+**🔥 Si no sigues este flujo:**
+- ❌ WordPress tendrá CSS no optimizado
+- ❌ Storybook no mostrará estilos
+- ❌ Core Web Vitals degradados
+- ❌ Performance WordPress comprometida
 
 ### Estructura Actual
 
@@ -79,41 +175,54 @@ toulouse-design-system/
 │   │   └── test-showcase/
 │   ├── tokens/
 │   │   └── design-tokens.css # Variables CSS centralizadas
-│   ├── extensions/         # 🧩 Sistema de extensiones
-│   │   ├── test-extension.js           # Extensión de prueba/validación
+│   ├── storybook/            # 📚 Generadores de Storybook
+│   │   ├── generate-stories.js
+│   │   ├── generate-stories-robust.js
+│   │   └── test-story-generator.js
+│   ├── extensions/           # 🧩 Sistema de extensiones
+│   │   ├── test-extension.js
 │   │   ├── conditional-logic-example.js
 │   │   └── events-and-interactions-example.js
-│   ├── metadata.json        # Metadata de componentes + tipos
-│   ├── page-templates.json  # Configuración de páginas + props
-│   └── index.js            # Entry point
+│   ├── metadata.json         # 🎯 SOLO: Metadata de componentes (escape, parameters)
+│   ├── page-templates.json   # 🎯 TODO: WordPress (postTypes, queries, SEO)
+│   └── index.js             # Entry point
 ├── scripts/
 │   ├── config/
 │   │   └── generate-wp-templates.js    # Entry point principal
-│   ├── validation/          # 🔍 Sistema de validación multinivel
-│   │   ├── hybrid-validator.js         # Validador híbrido profesional
-│   │   ├── component-render-validator.js # Validación renderizado componentes
-│   │   ├── component-render-validator-cli.js # CLI standalone
-│   │   ├── manager-validator.js        # Validación de managers
-│   │   └── wordpress-url-tester.js     # Test URLs WordPress vivo
-│   └── wp-generator/        # Sistema de generación WordPress
-│       ├── core/            # Configuración central
-│       │   ├── config.js               # Config dinámico con fail-fast
-│       │   └── config-manager.js       # Gestor de configuración
+│   ├── validation/          # 🔍 Sistema de validación unificado
+│   │   ├── core/           # Base de validación
+│   │   │   ├── validator-interface.js   # Interfaz común
+│   │   │   ├── validation-engine.js     # Motor de validación
+│   │   │   └── validation-result.js     # Estructuras de datos
+│   │   ├── cli/            # CLIs de validación
+│   │   │   ├── validate-offline.js     # Validación sin HTML
+│   │   │   └── validate-live.js        # Validación WordPress live
+│   │   ├── sources/        # Fuentes de datos
+│   │   │   └── html-source.js          # Source HTML para live validation
+│   │   └── validators/     # Validators específicos
+│   │       ├── metadata-validator.js   # Babel AST + escape validation
+│   │       ├── php-validator.js        # PHPCS + sintaxis PHP
+│   │       ├── structure-validator.js  # Estructura de archivos
+│   │       ├── component-validator.js  # Renderizado componentes
+│   │       ├── seo-validator.js        # SEO + meta tags
+│   │       └── asset-validator.js      # CSS, JS, assets
+│   └── wp-generator/        # 🎯 Sistema de generación WordPress
+│       ├── core/            # 🎯 ConfigSingleton - Single Source of Truth
+│       │   └── config-singleton.js    # ConfigSingleton (NO CACHE)
 │       ├── managers/        # Gestores especializados
 │       │   ├── asset-manager.js        # Assets optimizados (Vite)
 │       │   ├── analytics-manager.js    # GA4 + eventos separado
-│       │   ├── seo-editable-manager.js  # SEO dinámico + ACF editable
-│       │   ├── component-generator.js  # Lit → PHP + extensiones
+│       │   ├── seo-editable-manager.js # SEO dinámico + ACF editable
+│       │   ├── component-generator.js  # 🎯 Lit → PHP (usa ConfigSingleton)
 │       │   ├── template-builder.js     # Templates WordPress
-│       │   └── theme-structure.js      # Estructura del tema
+│       │   ├── theme-structure.js      # Estructura del tema
+│       │   └── acf-manager.js          # ACF fields automáticos
 │       ├── templates/       # Generadores de código
 │       │   ├── php-components.js       # PHP components
-│       │   ├── functions-template.js   # functions.php
-│       │   └── dynamic-page-templates.js
-│       ├── validation/      # Validación PHP + sintaxis
-│       │   ├── validator.js            # Validador básico
-│       │   ├── validation-manager.js   # Validaciones avanzadas
-│       │   └── php-validator.js        # Validación PHP tiempo real
+│       │   ├── functions-template.js   # 🎯 functions.php (usa ConfigSingleton)
+│       │   ├── babel-ast-converter.js  # AST Lit→PHP + escape automático
+│       │   ├── wp-templates.js         # Templates base WordPress
+│       │   └── dynamic-page-templates.js # Templates dinámicos
 │       └── extensions/      # 🧩 Sistema de extensiones
 │           ├── extension-manager.js    # Gestor de extensiones + hooks
 │           └── analytics/              # Extensiones Analytics
@@ -176,9 +285,14 @@ graph TD
 - **`interactive-gallery`** - Galería interactiva
 - **`test-showcase`** - Componente de prueba para validaciones
 
-### Generación Automática Lit → PHP
+### 🧠 Generación Babel AST: Lit → PHP
 
-Cada componente Lit se convierte automáticamente a PHP siguiendo las reglas de WordPress:
+Cada componente Lit se convierte automáticamente a PHP usando **Babel AST** con:
+
+- ✅ **Escape automático** basado en metadata declarativa
+- ✅ **Context tracking** para variables de scope
+- ✅ **Fail-fast validation** sin fallbacks silenciosos
+- ✅ **WordPress Coding Standards** aplicados automáticamente
 
 ```javascript
 // Lit Component (src/components/hero-section/hero-section.js)
@@ -187,6 +301,7 @@ render() {
     <section class="hero">
       <h1>${this.title}</h1>
       <p>${this.description}</p>
+      <a href="${this.link}">${this.linkText}</a>
     </section>
   `;
 }
@@ -194,12 +309,13 @@ render() {
 
 ```php
 <?php
-// PHP generado (wordpress-output/toulouse-lautrec/components/hero-section/hero-section.php)
-function render_hero_section($title = '', $description = '') {
+// PHP generado con escape automático (wordpress-output/toulouse-lautrec/components/hero-section/hero-section.php)
+function render_hero_section($title = '', $description = '', $link = '', $linkText = '') {
     ?>
     <section class="hero">
       <h1><?php echo esc_html($title); ?></h1>
       <p><?php echo esc_html($description); ?></p>
+      <a href="<?php echo esc_url($link); ?>"><?php echo esc_html($linkText); ?></a>
     </section>
     <?php
 }
@@ -225,16 +341,37 @@ function render_hero_section($title = '', $description = '') {
 ### **2. Iterative Components**
 > Bucles simples sobre colecciones WordPress
 
+**Configuración en `page-templates.json`:**
 ```json
 {
-  "name": "course-card",
-  "dataSource": {
-    "type": "post",
-    "postType": "carrera",
-    "query": { "numberposts": -1 },
-    "mapping": {
-      "title": { "source": "post_title", "type": "native" },
-      "image": { "source": "post_thumbnail_url", "type": "native" }
+  "page-carreras": {
+    "components": [
+      {
+        "name": "course-card",
+        "dataSource": {
+          "type": "post",
+          "postType": "carrera",
+          "query": {
+            "numberposts": -1,
+            "post_status": "publish"
+          },
+          "mapping": {
+            "title": { "source": "post_title", "type": "native" },
+            "description": { "source": "post_excerpt", "type": "native" },
+            "image": { "source": "post_thumbnail_url", "type": "native" },
+            "link": { "source": "post_permalink", "type": "native" },
+            "linkText": { "source": "Ver carrera", "type": "static" }
+          }
+        }
+      }
+    ]
+  },
+  "postTypes": {
+    "carrera": {
+      "labels": { "name": "Carreras", "singular_name": "Carrera" },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
     }
   }
 }
@@ -243,33 +380,112 @@ function render_hero_section($title = '', $description = '') {
 ### **3. Aggregated Components**
 > Datos complejos con ACF, agregación avanzada
 
+**Configuración en `page-templates.json`:**
 ```json
 {
-  "name": "testimonials",
-  "dataSource": {
-    "type": "post",
-    "postType": "testimonio",
-    "mapping": {
-      "user_photo": { "source": "meta_user_photo", "type": "acf" },
-      "rating": { "source": "meta_rating", "type": "acf" }
+  "page-carreras": {
+    "components": [
+      {
+        "name": "testimonials",
+        "props": {
+          "title": "Lo que dicen nuestros estudiantes",
+          "subtitle": "Testimonios de éxito de nuestros egresados"
+        },
+        "dataSource": {
+          "type": "post",
+          "postType": "testimonio",
+          "query": {
+            "numberposts": 6,
+            "post_status": "publish"
+          },
+          "mapping": {
+            "name": { "source": "post_title", "type": "native" },
+            "role": { "source": "meta_role", "type": "acf" },
+            "content": { "source": "post_content", "type": "native" },
+            "rating": { "source": "meta_rating", "type": "acf" },
+            "user_photo": { "source": "meta_user_photo", "type": "acf" },
+            "course": { "source": "meta_course", "type": "acf" }
+          }
+        }
+      }
+    ]
+  },
+  "postTypes": {
+    "testimonio": {
+      "labels": { "name": "Testimonios", "singular_name": "Testimonio" },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail", "excerpt"],
+      "show_in_rest": true
     }
   }
 }
 ```
 
-### **🔄 Separación de Responsabilidades**
+### **🎯 Nueva Separación de Responsabilidades (Refactorizada)**
 
-- **`metadata.json`** - Define QUÉ tipo de campo (`fieldType: "image"`)
-- **`page-templates.json`** - Define DÓNDE viene el dato (`source: "meta_photo"`)
-- **Manejo automático de imágenes** - Convierte IDs a URLs automáticamente
+- **`metadata.json`**: Define escape y estructura de componentes (parameters, arrayFields, escape metadata)
+- **`page-templates.json`**: Define TODO lo de WordPress (postTypes, queries, mappings, SEO, props)
+- **ConfigSingleton**: Single source of truth sin cache - lee ambos archivos fresh
+- **Component-Generator**: Usa ConfigSingleton para combinar metadata + dataSource
+
+### **🏗️ Ventajas de la Arquitectura Refactorizada:**
+
+✅ **Cohesión contextual**: postTypes donde se usan
+✅ **Single source por dominio**: WordPress data en un solo archivo
+✅ **Mantenibilidad**: Cambios visibles en contexto
+✅ **Escalabilidad**: Fácil agregar nuevos postTypes por página
+✅ **No redundancia**: Eliminada duplicación de definiciones
 
 ## ⚙️ Configuración
 
-### Archivos de Configuración Principales
+### **🎯 Archivos de Configuración Refactorizados**
 
-1. **`scripts/wp-generator/core/config.js`** - Configuración central
-2. **`src/metadata.json`** - Metadata de componentes
-3. **`src/page-templates.json`** - Configuración de páginas
+1. **`scripts/wp-generator/core/config-singleton.js`** - Single source of truth centralizada
+2. **`src/metadata.json`** - SOLO metadata de componentes (escape, parameters, arrayFields)
+3. **`src/page-templates.json`** - TODO WordPress (postTypes, queries, mappings, SEO, props)
+
+**📋 Ejemplo de separación clara:**
+
+**`src/metadata.json` - Solo metadatos de componentes:**
+```json
+{
+  "course-card": {
+    "type": "iterative",
+    "parameters": [
+      { "name": "title", "type": "string", "escape": "html" },
+      { "name": "description", "type": "string", "escape": "html" },
+      { "name": "image", "type": "string", "escape": "url" },
+      { "name": "link", "type": "string", "escape": "url" },
+      { "name": "linkText", "type": "string", "escape": "html" }
+    ]
+  }
+}
+```
+
+**`src/page-templates.json` - TODO WordPress:**
+```json
+{
+  "postTypes": {
+    "carrera": {
+      "labels": { "name": "Carreras" },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail"]
+    }
+  },
+  "page-carreras": {
+    "components": [{
+      "name": "course-card",
+      "dataSource": {
+        "postType": "carrera",
+        "query": { "numberposts": -1 },
+        "mapping": {
+          "title": { "source": "post_title", "type": "native" }
+        }
+      }
+    }]
+  }
+}
+```
 
 ### Analytics + SEO Separados
 
@@ -340,30 +556,59 @@ npm run storybook          # Documentación interactiva en puerto 6006
 # Verificar en: http://localhost:6006
 ```
 
-### **Paso 2: Configurar Metadata y Templates**
-```bash
-# 2.1 Configurar tipo de componente en metadata.json
+### **Paso 2: Configurar Metadata y Templates (Nueva Arquitectura)**
+
+**🎯 2.1 Configurar SOLO metadatos en `src/metadata.json`:**
+```json
 {
   "mi-componente": {
     "type": "aggregated",
-    "arrayFields": [
-      {"name": "titulo", "type": "string", "fieldType": "text"},
-      {"name": "imagen", "type": "string", "fieldType": "image"}
-    ]
+    "parameters": [
+      { "name": "titulo", "type": "string", "escape": "html" },
+      { "name": "imagen", "type": "string", "escape": "url" }
+    ],
+    "arrayFields": {
+      "items": [
+        { "name": "titulo", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "imagen", "type": "string", "fieldType": "image", "escape": "url" }
+      ]
+    }
   }
 }
+```
 
-# 2.2 Configurar datos en page-templates.json
+**🎯 2.2 Configurar TODO WordPress en `src/page-templates.json`:**
+```json
 {
+  "postTypes": {
+    "mi_post_type": {
+      "labels": { "name": "Mi Post Type", "singular_name": "Mi Item" },
+      "public": true,
+      "supports": ["title", "editor", "thumbnail"]
+    }
+  },
   "page-ejemplo": {
+    "file": "page-ejemplo.php",
+    "title": "Mi Página",
+    "seo": {
+      "title": "Mi Página | Mi Sitio",
+      "description": "Descripción de mi página"
+    },
     "components": [{
       "name": "mi-componente",
+      "props": {
+        "titulo": "Mi Título Estático"
+      },
       "dataSource": {
         "type": "post",
         "postType": "mi_post_type",
+        "query": {
+          "numberposts": -1,
+          "post_status": "publish"
+        },
         "mapping": {
-          "titulo": {"source": "post_title", "type": "native"},
-          "imagen": {"source": "meta_imagen", "type": "acf"}
+          "titulo": { "source": "post_title", "type": "native" },
+          "imagen": { "source": "meta_imagen", "type": "acf" }
         }
       }
     }]
@@ -371,11 +616,84 @@ npm run storybook          # Documentación interactiva en puerto 6006
 }
 ```
 
-### **Paso 3: Generar Stories (Opcional)**
+**💡 Ventajas de la separación:**
+- ✅ **Cohesión**: postTypes donde se usan
+- ✅ **Mantenibilidad**: Un cambio, un archivo
+- ✅ **Escalabilidad**: Fácil agregar páginas con sus postTypes
+- ✅ **Single source**: No duplicación de definiciones
+
+### **Paso 3: Generar Stories - Single Source of Truth**
+
+**🎯 Nuevo sistema de generación que usa SOLO metadata.json como fuente única:**
+
 ```bash
-npm run stories:generate         # Stories básicas
-npm run stories:generate:robust  # Stories con datos complejos
-npm run stories:test            # Verificar generador
+# 3.1 Generar stories desde metadata.json (recomendado)
+npm run stories:generate:robust
+
+# 3.2 Ver stories en Storybook
+npm run storybook              # http://localhost:6006
+```
+
+**✨ Ventajas del nuevo generador:**
+- ✅ **Zero duplication**: Una sola fuente para properties (metadata.json)
+- ✅ **Fail-fast**: Error claro si componente falta en metadata
+- ✅ **Consistent**: Mismo data source para PHP y Storybook
+- ✅ **Clean**: No extrae properties de archivos JavaScript
+
+**📋 Flujo de Stories Generation:**
+
+```mermaid
+graph TD
+    A[🎯 ConfigSingleton.getMetadata\(\)] --> B[📄 Lee metadata.json]
+    B --> C[🔍 Busca componentes sin stories]
+    C --> D[⚡ FAIL-FAST: Componente en metadata?]
+    D -->|❌ No| E[💥 Error: Componente no encontrado en metadata]
+    D -->|✅ Sí| F[📝 Genera story con parameters exactos]
+    F --> G[🔧 Aplica controls basados en types]
+    G --> H[📦 Crea Template con property assignments]
+    H --> I[🎨 Genera variantes si existen mocks]
+    I --> J[✅ Story listo en Storybook]
+```
+
+**🧩 Estructura de archivos generados:**
+
+```
+src/components/mi-componente/
+├── mi-componente.js           # Componente Lit original
+├── mi-componente.stories.js   # 📚 Generado automáticamente
+├── mi-componente.mocks.js     # 📦 Opcional: datos personalizados
+└── mi-componente.css          # Estilos separados
+```
+
+**📦 Ejemplo de mock personalizado:**
+```javascript
+// src/components/course-card/course-card.mocks.js
+module.exports = {
+  defaultArgs: {
+    title: 'Diseño UX/UI Avanzado',
+    description: 'Aprende diseño centrado en usuario',
+    price: 'S/ 299.00',
+    featured: true
+  },
+  variants: {
+    premium: {
+      title: 'Curso Premium',
+      price: 'S/ 599.00',
+      badge: 'Premium'
+    },
+    free: {
+      title: 'Curso Gratuito',
+      price: 'Gratis',
+      featured: false
+    }
+  }
+};
+```
+
+**⚠️ Fail-Fast en acción:**
+```bash
+❌ FAIL FAST: Componente 'new-component' no encontrado en metadata.json
+💡 Solución: Agregar 'new-component' a src/metadata.json con sus parameters
 ```
 
 ### **Paso 4: Generar Tema WordPress**
@@ -423,16 +741,155 @@ cp -r wordpress-output/toulouse-lautrec /path/to/wordpress/wp-content/themes/
 # Los componentes mostrarán datos reales automáticamente
 ```
 
-### **🔄 Para Desarrollo Continuo**
+### **🔄 Flujo Completo: Desarrollo → Storybook → WordPress**
+
+**📋 Ciclo iterativo recomendado:**
+
 ```bash
-# Ciclo iterativo de desarrollo:
-1. npm run dev              # Modificar componentes
-2. npm run wp:generate      # Regenerar tema
-3. Refresh WordPress        # Ver cambios en vivo
-4. npm run wp:test-urls     # Validar URLs específicas
+# 1. DESARROLLO: Crear/modificar componente
+npm run dev                  # Vite dev server para componentes Lit
+
+# 2. DOCUMENTAR: Actualizar metadata y generar stories
+# Editar src/metadata.json con parameters del componente
+npm run stories:generate:robust  # Generar stories automáticamente
+npm run storybook               # Verificar documentación (puerto 6006)
+
+# 3. CONFIGURAR: Setup WordPress data
+# Editar src/page-templates.json con postTypes y mappings
+
+# 4. GENERAR: Crear tema WordPress
+npm run wp:generate             # Generación completa con validaciones
+
+# 5. DESPLEGAR: Probar en WordPress
+# Copiar tema y activar en WordPress
+# Refresh browser para ver cambios
+
+# 6. VALIDAR: Testing completo
+npm run wp:test-urls           # URLs específicas
+npm run wp:validate            # Calidad completa
 ```
 
+**💡 Tips para flujo eficiente:**
+
+```bash
+# Desarrollo rápido (skip validaciones)
+npm run wp:generate:fast
+
+# Solo regenerar stories tras cambios de metadata
+npm run stories:generate:robust
+
+# Ver logs detallados de generación
+DEBUG_MODE=true npm run wp:generate
+
+# Validar solo componente específico
+npm run wp:validate:render
+```
+
+**🔄 Flujo específico por tipo de cambio:**
+
+| Cambio | Comandos necesarios |
+|--------|-------------------|
+| **Nuevo componente** | `metadata.json` → `stories:generate:robust` → `wp:generate` |
+| **Cambio UI/CSS** | `npm run dev` → `npm run wp:generate` |
+| **Cambio data** | `page-templates.json` → `npm run wp:generate` |
+| **Cambio properties** | `metadata.json` → `node generate-stories-robust.js [componente]` → `wp:generate` |
+| **Solo documentation** | `node generate-stories-robust.js [componente]` → `npm run storybook` |
+| **Regenerar story específico** | `node generate-stories-robust.js [componente]` (con backup automático) |
+
 ### **🐛 Troubleshooting para Developers**
+
+**🧩 Errores de Stories Generation:**
+
+**❌ Error: "Componente 'X' no encontrado en metadata.json"**
+```bash
+# Solución: Agregar componente a metadata.json
+# Ejemplo:
+{
+  "mi-componente": {
+    "type": "static",
+    "parameters": [
+      { "name": "title", "type": "string", "default": "", "escape": "html" }
+    ]
+  }
+}
+```
+
+**❌ Error: "Sin parameters en metadata.json"**
+```bash
+# Solución: Verificar que el componente tenga parameters definidos
+# NO puede estar vacío - debe tener al menos un parameter
+```
+
+**❌ Stories generado pero sin controls en Storybook**
+```bash
+# Solución: Verificar types en metadata.json son válidos
+# Tipos válidos: string, number, boolean, array, object
+# El generador mapea automáticamente a Storybook controls
+```
+
+**❌ Error: "Todos los componentes ya tienen stories"**
+```bash
+# Opción 1: Usar CLI para componente específico (recomendado - con backup)
+node src/storybook/generate-stories-robust.js mi-componente
+
+# Opción 2: Eliminar manualmente y regenerar
+rm src/components/mi-componente/mi-componente.stories.js
+npm run stories:generate:robust
+```
+
+**💡 Uso avanzado del CLI:**
+```bash
+# Regenerar múltiples componentes específicos
+node src/storybook/generate-stories-robust.js hero-section
+node src/storybook/generate-stories-robust.js course-card
+node src/storybook/generate-stories-robust.js testimonials
+
+# Ver todas las opciones disponibles
+node src/storybook/generate-stories-robust.js --help
+```
+
+**🎨 Errores de CSS Architecture:**
+
+**❌ Error: "Componente no tiene estilos en Storybook"**
+```bash
+# Verificar que main.css incluya el componente
+grep "mi-componente" src/main.css
+
+# Si no está, agregarlo:
+echo "@import './components/mi-componente/mi-componente.css';" >> src/main.css
+
+# Reiniciar Storybook
+npm run storybook
+```
+
+**❌ Error: "Estilos no se aplican en WordPress"**
+```bash
+# Verificar que main.css se construya correctamente
+npm run build
+
+# Verificar que WordPress enqueue el CSS unificado (no individual)
+# El generador WordPress debe usar dist/css/toulouse-design-system-*.css
+```
+
+**❌ Error: "Developer usó inline styles"**
+```bash
+# Buscar violaciones críticas
+grep -r "static styles.*css\`" src/components/
+# Si encuentra algo, mover a archivos .css separados INMEDIATAMENTE
+```
+
+**💡 Validación CSS obligatoria antes de deploy:**
+```bash
+# 1. Verificar que no hay inline styles
+npm run lint:css-architecture  # (crear este script si es necesario)
+
+# 2. Verificar que main.css incluye todos los componentes
+find src/components -name "*.css" | wc -l  # Contar CSS files
+grep -c "@import.*components" src/main.css # Contar imports en main.css
+# Los números deben coincidir
+```
+
+**🎯 Errores WordPress Generation:**
 
 **❌ Error: "fieldTypes is not defined"**
 ```bash
@@ -500,11 +957,41 @@ npm run wp:validate:render
 
 ## 🎯 WordPress Best Practices
 
+### 🔒 Sistema de Escape Metadata-Driven
+
+El sistema usa metadata declarativa para aplicar escape automático:
+
+```json
+// src/metadata.json - Configuración de escape
+{
+  "hero-section": {
+    "parameters": [
+      { "name": "title", "type": "string", "escape": "html" },
+      { "name": "link", "type": "string", "escape": "url" },
+      { "name": "linkText", "type": "string", "escape": "html" }
+    ],
+    "arrayFields": {
+      "features": [
+        { "name": "icon", "type": "string", "fieldType": "text", "escape": "html" },
+        { "name": "url", "type": "string", "fieldType": "url", "escape": "url" }
+      ]
+    }
+  }
+}
+```
+
+### 🚨 Fail-Fast: Sin Fallbacks
+
+- ✅ **Metadata obligatoria**: Si falta escape metadata, el generador falla
+- ❌ **Sin fallbacks**: No hay código que "adivine" el tipo de escape
+- ✅ **Errores claros**: Mensajes específicos indican qué metadata falta
+- ✅ **Rollback automático**: Limpieza completa si algo falla
+
 ### Seguridad y Escapado
-- ✅ `esc_html()` para texto
-- ✅ `esc_url()` para URLs
-- ✅ `esc_attr()` para atributos
-- ✅ `wp_kses_post()` para contenido rico
+- ✅ `esc_html()` para texto (declarado en metadata)
+- ✅ `esc_url()` para URLs (declarado en metadata)
+- ✅ `esc_attr()` para atributos (declarado en metadata)
+- ✅ `wp_kses_post()` para contenido rico (cuando necesario)
 
 ### Internacionalización
 - ✅ `__()` y `_e()` para todos los textos

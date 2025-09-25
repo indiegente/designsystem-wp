@@ -14,7 +14,7 @@ export default {
         "description": "Tipo: string. Default: \"\""
     },
     "testimonials": {
-        "control": "text",
+        "control": "object",
         "description": "Tipo: array. Default: \"[]\""
     }
 },

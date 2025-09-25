@@ -147,6 +147,88 @@ class BabelASTConverter {
     this.errors = [];
     this.componentName = '';
     this.context = new ContextTracker(); // Sistema de contexto robusto
+    this.metadata = this.loadMetadata(); // Cargar metadata de escape
+  }
+
+  /**
+   * Cargar metadata de escape desde src/metadata.json
+   */
+  loadMetadata() {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const metadataPath = path.join(process.cwd(), 'src', 'metadata.json');
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      console.log('📋 Metadata de escape cargada exitosamente');
+      return metadata;
+    } catch (error) {
+      console.warn('⚠️ No se pudo cargar metadata de escape, usando fallback');
+      return {};
+    }
+  }
+
+  /**
+   * Obtener información de escape para una propiedad específica
+   * Implementa Opción 1 (Metadata) + Opción 3 (Contexto)
+   */
+  getEscapeInfo(propertyName, componentName, isInAttribute = false, attributeName = '') {
+    // Opción 3: Contexto semántico (prioridad más alta)
+    if (isInAttribute) {
+      if (attributeName === 'href' || attributeName === 'src' || attributeName === 'action') {
+        return { function: 'esc_url', reason: `contextual:attribute[${attributeName}]` };
+      }
+      return { function: 'esc_attr', reason: `contextual:attribute[${attributeName}]` };
+    }
+
+    // Opción 1: Metadata declarativa
+    const componentMeta = this.metadata[componentName];
+    if (componentMeta && componentMeta.parameters) {
+      const param = componentMeta.parameters.find(p => p.name === propertyName);
+      if (param && param.escape) {
+        const escapeMap = {
+          'html': 'esc_html',
+          'url': 'esc_url',
+          'attr': 'esc_attr',
+          'js': 'esc_js',
+          'none': 'none'
+        };
+        return {
+          function: escapeMap[param.escape] || 'esc_html',
+          reason: `metadata:${param.escape}`
+        };
+      }
+    }
+
+    // FAIL FAST: Sin fallbacks según .rules
+    throw new Error(`❌ ESCAPE METADATA FALTANTE: Campo '${propertyName}' en componente '${componentName}' no tiene escape metadata declarativo. Actualizar src/metadata.json`);
+  }
+
+  /**
+   * Obtener información de escape para propiedades de array (testimonials, features, etc.)
+   */
+  getArrayFieldEscapeInfo(fieldName, componentName) {
+    const componentMeta = this.metadata[componentName];
+    if (componentMeta && componentMeta.arrayFields) {
+      for (const [arrayName, fields] of Object.entries(componentMeta.arrayFields)) {
+        const field = fields.find(f => f.name === fieldName);
+        if (field && field.escape) {
+          const escapeMap = {
+            'html': 'esc_html',
+            'url': 'esc_url',
+            'attr': 'esc_attr',
+            'js': 'esc_js',
+            'none': 'none'
+          };
+          return {
+            function: escapeMap[field.escape] || 'esc_html',
+            reason: `arrayField:${field.escape}`
+          };
+        }
+      }
+    }
+
+    // FAIL FAST: Sin fallbacks según .rules
+    throw new Error(`❌ ARRAY FIELD ESCAPE METADATA FALTANTE: Campo '${fieldName}' en arrays de componente '${componentName}' no tiene escape metadata declarativo. Actualizar arrayFields en src/metadata.json`);
   }
 
   /**
@@ -501,12 +583,14 @@ class BabelASTConverter {
       const shouldEscape = !this.context.isInPHPContext() && !contextName.includes('-test');
 
       if (shouldEscape) {
-        // Determinar tipo de escape basado en el nombre de la propiedad
-        if (property.includes('url') || property.includes('link')) {
-          this.convertedPHP += `<?php echo esc_url( ${phpVar} ); ?>`;
+        // SISTEMA ROBUSTO: Usar metadata + contexto semántico
+        const escapeInfo = this.getEscapeInfo(property, this.componentName);
+        if (escapeInfo.function === 'none') {
+          this.convertedPHP += phpVar;
         } else {
-          this.convertedPHP += `<?php echo esc_html( ${phpVar} ); ?>`;
+          this.convertedPHP += `<?php echo ${escapeInfo.function}( ${phpVar} ); ?>`;
         }
+        console.log(`🔒 Escape aplicado: ${property} -> ${escapeInfo.function} (${escapeInfo.reason})`);
       } else {
         // Ya estamos en PHP o es una condición - solo la variable
         this.convertedPHP += phpVar;
@@ -531,11 +615,14 @@ class BabelASTConverter {
       }
 
       if (shouldEscape) {
-        if (property.includes('url') || property.includes('link')) {
-          this.convertedPHP += `<?php echo esc_url( $${loopVar}['${property}'] ); ?>`;
+        // SISTEMA ROBUSTO: Usar metadata para array fields
+        const escapeInfo = this.getArrayFieldEscapeInfo(property, this.componentName);
+        if (escapeInfo.function === 'none') {
+          this.convertedPHP += `$${loopVar}['${property}']`;
         } else {
-          this.convertedPHP += `<?php echo esc_html( $${loopVar}['${property}'] ); ?>`;
+          this.convertedPHP += `<?php echo ${escapeInfo.function}( $${loopVar}['${property}'] ); ?>`;
         }
+        console.log(`🔒 Array escape aplicado: ${property} -> ${escapeInfo.function} (${escapeInfo.reason})`);
       } else {
         this.convertedPHP += `$${loopVar}['${property}']`;
       }

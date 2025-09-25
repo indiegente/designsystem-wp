@@ -1,4 +1,6 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, unsafeCSS } from 'lit';
+import './interactive-gallery.css'; // For global Storybook/WordPress styles
+import componentStyles from './interactive-gallery.css?inline'; // For Shadow DOM
 
 export class InteractiveGallery extends LitElement {
   static properties = {
@@ -20,7 +22,8 @@ export class InteractiveGallery extends LitElement {
     this.currentIndex = 0;
   }
 
-  static styles = css``;
+  // 🏆 MEJOR PRÁCTICA: Vite ?inline es el estándar moderno
+  static styles = css`${unsafeCSS(componentStyles)}`;
 
   render() {
     if (!this.images || this.images.length === 0) {
