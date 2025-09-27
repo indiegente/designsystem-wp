@@ -15,7 +15,8 @@ const path = require('path');
 class ComponentValidator extends ValidatorInterface {
   constructor(config = {}) {
     super('Component Validator', config);
-    this.requiredSources = ['config']; // Cambiar para validación offline
+    // ✅ SINGLE SOURCE OF TRUTH: No requiere sources externos, usa ConfigSingleton
+    this.requiredSources = [];
     this.supportsHTML = true; // Indicar que puede usar HTML si está disponible
   }
 
@@ -26,10 +27,16 @@ class ComponentValidator extends ValidatorInterface {
    */
   async validate(sources, context = {}) {
     const html = sources.html || '';
-    const configs = sources.config || {};
     const { page = 'offline', expectedComponents = [] } = context;
 
     console.log(`   🧩 Validando componentes para ${page}...`);
+
+    // 🎯 SINGLE SOURCE OF TRUTH: Usar ConfigSingleton directamente
+    const configSingleton = ConfigSingleton.getInstance();
+    const configs = {
+      metadata: configSingleton.getMetadata(),
+      pageTemplates: configSingleton.getPageTemplates()
+    };
 
     // Si tenemos HTML, hacer validaciones completas
     if (html) {

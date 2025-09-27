@@ -13,7 +13,8 @@ const ConfigSingleton = require('../../wp-generator/core/config-singleton');
 class MetadataValidator extends ValidatorInterface {
   constructor(config = {}) {
     super('Metadata Validator', config);
-    this.requiredSources = ['config'];
+    // ✅ SINGLE SOURCE OF TRUTH: No requiere sources externos, usa ConfigSingleton
+    this.requiredSources = [];
   }
 
   /**

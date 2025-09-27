@@ -1,13 +1,13 @@
 const fs = require('fs');
 const path = require('path');
-const WpTemplates = require('../templates/wp-templates');
+const WpTemplateGenerator = require('../templates/wp-template-generator');
 const FunctionsTemplate = require('../templates/functions-template');
 const PHPValidator = require('../../validation/validators/php-validator');
 
 class TemplateBuilder {
   constructor(config) {
     this.config = config;
-    this.wpTemplates = new WpTemplates(config);
+    this.wpTemplateGenerator = new WpTemplateGenerator(config);
     this.functionsTemplate = new FunctionsTemplate(config);
     // PHPValidator modernizado - usar método estático
     this.metadata = this.loadMetadata();
@@ -84,7 +84,7 @@ class TemplateBuilder {
 
     // Generar templates de forma asíncrona
     const templatePromises = templates.map(async template => {
-      const templateContent = await this.wpTemplates.generate(template.name);
+      const templateContent = await this.wpTemplateGenerator.generate(template.name);
       const templatePath = path.join(
         this.config.outputDir, 
         this.config.themeName, 
