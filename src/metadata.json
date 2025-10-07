@@ -1,4 +1,53 @@
 {
+  "wordpress_plugins": {
+    "security": {
+      "plugin": "headers-security-advanced-hsts-wp",
+      "auto_install": true,
+      "config": {
+        "headers": ["csp", "hsts", "xss-protection"],
+        "theme_color": "#FF6B35"
+      }
+    },
+    "performance": {
+      "plugin": "wp-rest-cache",
+      "auto_install": true,
+      "config": {
+        "cache_duration": 3600,
+        "endpoints": [
+          "/wp-json/wp/v2/posts",
+          "/wp-json/wp/v2/pages",
+          "/wp-json/theme/v1/*"
+        ]
+      }
+    },
+    "seo": {
+      "plugin": "seo-by-rank-math",
+      "auto_install": true,
+      "config": {
+        "features": ["rich_snippets", "xml_sitemap", "breadcrumbs"],
+        "primary_color": "#FF6B35",
+        "company_name": "Toulouse Design System"
+      }
+    },
+    "analytics": {
+      "plugin": "google-analytics-for-wordpress",
+      "auto_install": true,
+      "config": {
+        "tracking_code": "{{GA4_TRACKING_ID}}",
+        "features": ["enhanced_ecommerce", "demographics", "events"],
+        "anonymize_ip": true
+      }
+    },
+    "cloud_storage": {
+      "plugin": "wp-stateless",
+      "auto_install": true,
+      "config": {
+        "bucket_name": "{{GCS_BUCKET_NAME}}",
+        "mode": "cdn",
+        "cache_control": "public, max-age=2592000"
+      }
+    }
+  },
   "hero-section": {
     "type": "static",
     "phpFunction": "render_hero_section",
@@ -74,8 +123,8 @@
       { "name": "title", "type": "string", "default": "", "escape": "html" },
       { "name": "subtitle", "type": "string", "default": "", "escape": "html" },
       { "name": "images", "type": "array", "default": "[]", "escape": "none" },
-      { "name": "autoPlay", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "showThumbnails", "type": "boolean", "default": "true", "escape": "attr" }
+      { "name": "autoPlay", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "showThumbnails", "type": "boolean", "default": true, "escape": "attr" }
     ],
     "arrayFields": {
       "images": [
@@ -91,9 +140,9 @@
     "parameters": [
       { "name": "title", "type": "string", "default": "Test Showcase - Validación Completa", "escape": "html" },
       { "name": "description", "type": "string", "default": "Componente para probar todos los managers", "escape": "html" },
-      { "name": "testImages", "type": "array", "default": "array()", "escape": "none" },
-      { "name": "testData", "type": "object", "default": "array()", "escape": "none" },
-      { "name": "enableAnalytics", "type": "boolean", "default": "true", "escape": "attr" }
+      { "name": "testImages", "type": "array", "default": [], "escape": "none" },
+      { "name": "testData", "type": "object", "default": {}, "escape": "none" },
+      { "name": "enableAnalytics", "type": "boolean", "default": true, "escape": "attr" }
     ],
     "arrayFields": {
       "testImages": [
@@ -112,8 +161,8 @@
     "parameters": [
       { "name": "siteName", "type": "string", "default": "Design System Site", "escape": "html" },
       { "name": "homeUrl", "type": "string", "default": "/", "escape": "url" },
-      { "name": "showNavigation", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "navigationItems", "type": "array", "default": "array()", "escape": "none" }
+      { "name": "showNavigation", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "navigationItems", "type": "array", "default": [], "escape": "none" }
     ],
     "arrayFields": {
       "navigationItems": [
@@ -127,10 +176,10 @@
     "phpFunction": "render_site_footer",
     "parameters": [
       { "name": "siteName", "type": "string", "default": "Design System Site", "escape": "html" },
-      { "name": "showCopyright", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "showNavigation", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "navigationItems", "type": "array", "default": "array()", "escape": "none" },
-      { "name": "socialLinks", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "showCopyright", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "showNavigation", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "navigationItems", "type": "array", "default": [], "escape": "none" },
+      { "name": "socialLinks", "type": "array", "default": [], "escape": "none" },
       { "name": "customText", "type": "string", "default": "Todos los derechos reservados.", "escape": "html" }
     ],
     "arrayFields": {
@@ -154,9 +203,9 @@
       { "name": "description", "type": "string", "default": "Lo sentimos, la página que buscas no existe o ha sido movida.", "escape": "html" },
       { "name": "homeUrl", "type": "string", "default": "/", "escape": "url" },
       { "name": "homeText", "type": "string", "default": "Volver al inicio", "escape": "html" },
-      { "name": "showSearch", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "showSuggestions", "type": "boolean", "default": "true", "escape": "attr" },
-      { "name": "suggestions", "type": "array", "default": "array()", "escape": "none" },
+      { "name": "showSearch", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "showSuggestions", "type": "boolean", "default": true, "escape": "attr" },
+      { "name": "suggestions", "type": "array", "default": [], "escape": "none" },
       { "name": "handleSearch", "type": "string", "default": "", "escape": "html" },
       { "name": "searchPlaceholder", "type": "string", "default": "Buscar...", "escape": "html" }
     ],
@@ -173,12 +222,12 @@
     "phpFunction": "render_search_results",
     "parameters": [
       { "name": "searchTerm", "type": "string", "default": "", "escape": "html" },
-      { "name": "totalResults", "type": "number", "default": "0", "escape": "html" },
-      { "name": "results", "type": "array", "default": "array()", "escape": "none" },
-      { "name": "showNoResults", "type": "boolean", "default": "false", "escape": "attr" },
+      { "name": "totalResults", "type": "number", "default": 0, "escape": "html" },
+      { "name": "results", "type": "array", "default": [], "escape": "none" },
+      { "name": "showNoResults", "type": "boolean", "default": false, "escape": "attr" },
       { "name": "noResultsTitle", "type": "string", "default": "No se encontraron resultados", "escape": "html" },
       { "name": "noResultsMessage", "type": "string", "default": "Intenta con otros términos de búsqueda.", "escape": "html" },
-      { "name": "showSuggestions", "type": "boolean", "default": "true", "escape": "attr" },
+      { "name": "showSuggestions", "type": "boolean", "default": true, "escape": "attr" },
       { "name": "suggestions", "type": "array", "default": "array()", "escape": "none" }
     ],
     "arrayFields": {

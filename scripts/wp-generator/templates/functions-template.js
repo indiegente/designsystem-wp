@@ -211,6 +211,18 @@ function ${this.functionPrefix}_load_advanced_modules() {
     if (file_exists($assets_file)) {
         require_once $assets_file;
     }
+
+    // 🔌 Plugin Orchestrator - Auto instalación y configuración
+    $plugin_orchestrator_file = get_template_directory() . '/includes/class-plugin-orchestrator.php';
+    if (file_exists($plugin_orchestrator_file)) {
+        require_once $plugin_orchestrator_file;
+    }
+
+    // 🧩 Gutenberg Blocks - Componentes Lit como bloques
+    $gutenberg_blocks_file = get_template_directory() . '/blocks/index.php';
+    if (file_exists($gutenberg_blocks_file)) {
+        require_once $gutenberg_blocks_file;
+    }
 }
 add_action('init', '${this.functionPrefix}_load_advanced_modules');
 

@@ -7,6 +7,8 @@ const ThemeStructure = require('./managers/theme-structure');
 const AnalyticsManager = require('./managers/analytics-manager');
 const ACFManager = require('./managers/acf-manager');
 const SEOEditableManager = require('./managers/seo-editable-manager');
+const PluginOrchestrator = require('./managers/plugin-orchestrator');
+const GutenbergConverter = require('./managers/gutenberg-converter');
 // 🚀 Validators migrados al nuevo sistema moderno
 const { ValidationEngine } = require('../validation/core/validation-engine');
 const StructureValidator = require('../validation/validators/structure-validator');
@@ -35,6 +37,8 @@ class WordPressGenerator {
     this.validationEngine = this.createValidationEngine();
     this.acfManager = new ACFManager(this.config);
     this.seoEditableManager = new SEOEditableManager(this.config);
+    this.pluginOrchestrator = new PluginOrchestrator(this.config);
+    this.gutenbergConverter = new GutenbergConverter(this.config);
   }
 
   /**
@@ -174,6 +178,24 @@ class WordPressGenerator {
         }
       } catch (error) {
         console.log('⚠️ SEO Editable: Error generando campos editables:', error.message);
+      }
+
+      // 9. Generar Plugin Orchestrator - Auto instalación y configuración
+      console.log('🔌 Generando Plugin Orchestrator...');
+      try {
+        this.pluginOrchestrator.generatePluginOrchestratorPHP();
+        console.log('✅ Plugin Orchestrator: Sistema de auto-instalación configurado');
+      } catch (error) {
+        console.log('⚠️ Plugin Orchestrator: Error generando sistema:', error.message);
+      }
+
+      // 10. Generar Gutenberg Blocks desde componentes Lit
+      console.log('🧩 Generando bloques de Gutenberg...');
+      try {
+        const gutenbergStats = this.gutenbergConverter.generateAllBlocks();
+        console.log(`✅ Gutenberg: ${gutenbergStats.blocksGenerated} bloques generados desde componentes Lit`);
+      } catch (error) {
+        console.log('⚠️ Gutenberg: Error generando bloques:', error.message);
       }
 
       // 🚀 7. NO HAY VALIDACIÓN POST-GENERACIÓN - FAIL-FAST DURANTE GENERACIÓN

@@ -346,3 +346,258 @@ convertToPhp(node, context) {
 ```
 
 **🎯 OBJETIVO**: Toda codificación debe ser robusta, escalable y manejar contextos completos - sin excepciones ni fixes puntuales.
+
+## 🩸 LEY ESCRITA EN SANGRE: BUENAS PRÁCTICAS DE WORDPRESS
+
+### 🚨 PRINCIPIO FUNDAMENTAL
+**TODO EL CÓDIGO GENERADO EN PHP DEBE SEGUIR ESTRICTAMENTE LAS MEJORES PRÁCTICAS DE WORDPRESS - SIN EXCEPCIONES**
+
+Esta regla está escrita en sangre y no puede ser violada por ningún motivo.
+
+### 🧩 GUTENBERG BLOCKS - ESTÁNDARES OBLIGATORIOS
+
+#### ❌ PROBLEMAS ACTUALES QUE VIOLAN ESTÁNDARES WORDPRESS
+1. **Scripts ES6 sin build process**: WordPress core no soporta ES6 modules directamente
+2. **Registro híbrido PHP/JS**: Los bloques DEBEN registrarse exclusivamente en PHP
+3. **Enqueue en hooks incorrectos**: SOLO usar `enqueue_block_editor_assets` para editor
+4. **Dependencias incorrectas**: `wp-editor` está deprecado, usar `wp-block-editor`
+5. **Server-side rendering inconsistente**: Todos los bloques DEBEN usar SSR por defecto
+
+#### ✅ ESTÁNDARES WORDPRESS OBLIGATORIOS
+
+##### 1. Estructura de Archivos (WordPress Standard)
+```
+blocks/
+├── index.php                    # Auto-registro de bloques
+├── block-name/
+│   ├── block.json              # Metadatos WordPress estándar
+│   ├── index.php               # Registro específico del bloque
+│   ├── render.php              # Server-side rendering callback
+│   ├── edit.js                 # Editor script (vanilla JS, NO ES6)
+│   ├── save.js                 # Frontend script (opcional)
+│   ├── style.css               # Estilos frontend/editor
+│   └── editor.css              # Estilos solo editor
+```
+
+##### 2. Registro de Bloques (SOLO PHP)
+```php
+// ✅ OBLIGATORIO: Registro en PHP usando WordPress standards
+register_block_type(__DIR__ . '/block-name', array(
+    'render_callback' => 'render_block_name_callback'
+));
+
+function render_block_name_callback($attributes, $content, $block) {
+    // ✅ OBLIGATORIO: Server-side rendering
+    $escaped_attributes = array_map('sanitize_text_field', $attributes);
+    return render_component_name($escaped_attributes);
+}
+```
+
+##### 3. Scripts del Editor (Vanilla JS OBLIGATORIO)
+```javascript
+// ✅ OBLIGATORIO: Solo vanilla JavaScript, NO ES6 modules
+(function() {
+    'use strict';
+
+    const { registerBlockType } = wp.blocks;
+    const { useBlockProps, InspectorControls } = wp.blockEditor;
+    const { PanelBody, TextControl } = wp.components;
+    const { __ } = wp.i18n;
+
+    registerBlockType('theme-prefix/block-name', {
+        edit: function(props) {
+            const blockProps = useBlockProps({
+                className: 'theme-block-name-editor'
+            });
+
+            return wp.element.createElement(
+                'div',
+                blockProps,
+                // ✅ OBLIGATORIO: Solo preview, SSR en frontend
+                __('Preview: Block Name Component', 'text-domain')
+            );
+        },
+        save: function() {
+            // ✅ OBLIGATORIO: Server-side rendering
+            return null;
+        }
+    });
+})();
+```
+
+##### 4. Dependencias y Enqueue (WordPress Standards)
+```php
+// ✅ OBLIGATORIO: Dependencias correctas de WordPress core
+function theme_enqueue_block_editor_assets() {
+    wp_register_script(
+        'block-name-editor',
+        get_template_directory_uri() . '/blocks/block-name/edit.js',
+        array(
+            'wp-blocks',          // registerBlockType
+            'wp-element',         // createElement, Fragment
+            'wp-block-editor',    // useBlockProps, InspectorControls
+            'wp-components',      // PanelBody, TextControl
+            'wp-i18n'            // __()
+        ),
+        filemtime(get_template_directory() . '/blocks/block-name/edit.js'),
+        true
+    );
+
+    wp_enqueue_script('block-name-editor');
+}
+add_action('enqueue_block_editor_assets', 'theme_enqueue_block_editor_assets');
+```
+
+##### 5. Block.json (WordPress Schema Compliant)
+```json
+{
+    "$schema": "https://schemas.wp.org/trunk/block.json",
+    "apiVersion": 3,
+    "name": "theme-prefix/block-name",
+    "title": "Block Title",
+    "category": "theme-blocks",
+    "icon": "admin-post",
+    "description": "Block description",
+    "keywords": ["theme", "component"],
+    "supports": {
+        "html": false,
+        "anchor": true,
+        "customClassName": true
+    },
+    "attributes": {
+        "title": {
+            "type": "string",
+            "default": ""
+        }
+    },
+    "textdomain": "theme-text-domain",
+    "editorScript": "file:./edit.js",
+    "style": "file:./style.css",
+    "editorStyle": "file:./editor.css",
+    "render": "file:./render.php"
+}
+```
+
+### 🏗️ ARQUITECTURA ESCALABLE OBLIGATORIA
+
+#### 1. Auto-Discovery Pattern (WordPress Best Practice)
+```php
+// ✅ OBLIGATORIO: Auto-registro de bloques siguiendo WordPress standards
+function theme_register_blocks() {
+    $blocks_dir = get_template_directory() . '/blocks/';
+
+    foreach (glob($blocks_dir . '*/block.json') as $block_json) {
+        $block_dir = dirname($block_json);
+
+        // ✅ OBLIGATORIO: Validar estructura antes de registrar
+        if (file_exists($block_dir . '/render.php')) {
+            register_block_type($block_dir);
+        }
+    }
+}
+add_action('init', 'theme_register_blocks');
+```
+
+#### 2. Server-Side Rendering Callbacks
+```php
+// ✅ OBLIGATORIO: Cada bloque DEBE tener render callback
+function render_component_callback($attributes, $content, $block) {
+    // ✅ OBLIGATORIO: Sanitizar attributes
+    $sanitized = array();
+    foreach ($attributes as $key => $value) {
+        $sanitized[$key] = sanitize_text_field($value);
+    }
+
+    // ✅ OBLIGATORIO: Llamar componente PHP con escape
+    ob_start();
+    if (function_exists('render_component_name')) {
+        render_component_name($sanitized);
+    } else {
+        // ✅ OBLIGATORIO: Graceful fallback
+        echo '<p>' . esc_html__('Component not available', 'text-domain') . '</p>';
+    }
+    return ob_get_clean();
+}
+```
+
+### 🔒 SEGURIDAD Y SANITIZACIÓN (OBLIGATORIO)
+
+#### ✅ ESCAPE AUTOMÁTICO PARA BLOQUES
+```php
+// ✅ OBLIGATORIO: Todo output debe ser escapado
+function render_block_with_escape($attributes) {
+    $title = isset($attributes['title']) ? esc_html($attributes['title']) : '';
+    $url = isset($attributes['url']) ? esc_url($attributes['url']) : '';
+    $class = isset($attributes['className']) ? esc_attr($attributes['className']) : '';
+
+    return sprintf(
+        '<div class="%s"><h2>%s</h2><a href="%s">Link</a></div>',
+        $class,
+        $title,
+        $url
+    );
+}
+```
+
+### 📋 CHECKLIST OBLIGATORIO PARA CADA BLOQUE
+
+#### ✅ Estructura
+- [ ] `block.json` sigue WordPress schema
+- [ ] `render.php` con callback válido
+- [ ] `edit.js` en vanilla JavaScript (NO ES6)
+- [ ] Dependencias WordPress core correctas
+
+#### ✅ Seguridad
+- [ ] Todos los attributes sanitizados
+- [ ] Todas las salidas escapadas
+- [ ] Text domain consistente
+- [ ] Nonces para forms (si aplica)
+
+#### ✅ Performance
+- [ ] Server-side rendering por defecto
+- [ ] Scripts enqueued correctamente
+- [ ] Estilos separados por contexto
+- [ ] Cache-friendly (sin inline styles)
+
+#### ✅ Accesibilidad
+- [ ] Elementos semánticos correctos
+- [ ] Alt text para imágenes
+- [ ] Focus management
+- [ ] Screen reader friendly
+
+### 🚨 ENFORCEMENT EN GENERADORES
+
+#### Validación Automática Obligatoria
+```javascript
+// ✅ OBLIGATORIO: Validar estándares WordPress en generación
+class WordPressStandardsValidator {
+    validateBlockStructure(blockPath) {
+        const required = ['block.json', 'edit.js', 'render.php'];
+
+        for (const file of required) {
+            if (!fs.existsSync(path.join(blockPath, file))) {
+                throw new Error(`❌ WORDPRESS STANDARD VIOLATION: ${file} missing in ${blockPath}`);
+            }
+        }
+    }
+
+    validateEditScript(scriptContent) {
+        if (scriptContent.includes('import ') || scriptContent.includes('export ')) {
+            throw new Error('❌ WORDPRESS STANDARD VIOLATION: ES6 modules not allowed in edit.js');
+        }
+
+        if (!scriptContent.includes('registerBlockType')) {
+            throw new Error('❌ WORDPRESS STANDARD VIOLATION: registerBlockType required in edit.js');
+        }
+    }
+}
+```
+
+### 🎯 OBJETIVOS DE CUMPLIMIENTO
+
+1. **100% WordPress Coding Standards**: Todo PHP generado debe pasar PHPCS
+2. **100% Security Standards**: Todo output escapado, todo input sanitizado
+3. **100% Performance Standards**: SSR por defecto, scripts optimizados
+4. **100% Accessibility Standards**: Semántica correcta, screen reader friendly
+
+**Esta ley no puede ser violada bajo ninguna circunstancia. Cualquier código que no cumpla estos estándares debe ser rechazado y reescrito.**

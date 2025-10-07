@@ -48,7 +48,7 @@ class TemplateBuilder {
   async generateAll() {
     try {
       await this.generateWordPressTemplates();
-      this.generateStyleHeader();
+      // ⚠️ style.css es responsabilidad de ThemeStructure (NO duplicar aquí)
       this.generateFunctionsFile(); // Este puede lanzar error crítico
       console.log('✅ Todos los templates generados correctamente');
     } catch (error) {
@@ -97,27 +97,20 @@ class TemplateBuilder {
     await Promise.all(templatePromises);
   }
 
-  generateStyleHeader() {
-    const themeConfig = this.config.theme || {};
-    const styleContent = `/*
-Theme Name: ${themeConfig.displayName || 'Generated Theme'}
-Description: ${themeConfig.description || 'Tema personalizado generado automáticamente desde Design System'}
-Version: ${themeConfig.version || '1.0.0'}
-Author: ${themeConfig.author || 'Design System Generator'}
-Text Domain: ${themeConfig.textDomain || 'generated-theme'}
-*/
-
-@import url('assets/css/design-tokens.css');
-`;
-
-    const stylePath = path.join(
-      this.config.outputDir, 
-      this.config.themeName, 
-      'style.css'
-    );
-    
-    fs.writeFileSync(stylePath, styleContent);
-  }
+  /**
+   * ⚠️ DEPRECATED: style.css ahora es responsabilidad de ThemeStructure
+   *
+   * ThemeStructure.generateWordPressStyleCSS() maneja:
+   * - Metadata de WordPress (OBLIGATORIA)
+   * - Documentación de arquitectura CSS
+   * - Estilos mínimos obligatorios
+   *
+   * NO generar style.css aquí para evitar duplicación.
+   * Esta función se mantiene comentada para referencia histórica.
+   */
+  // generateStyleHeader() {
+  //   // DEPRECATED - Ver ThemeStructure.generateWordPressStyleCSS()
+  // }
 
   generateFunctionsFile() {
     const functionsContent = this.functionsTemplate.generate();

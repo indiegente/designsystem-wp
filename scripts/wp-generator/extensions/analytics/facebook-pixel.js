@@ -99,7 +99,7 @@ class FacebookPixelExtension {
         if (typeof fbq !== 'undefined') {
           fbq('track', 'Lead', {
             content_category: 'educational_lead',
-            source: 'toulouse_website'
+            source: '${this.config.themeName || 'design_system'}_website'
           });
         }
       });

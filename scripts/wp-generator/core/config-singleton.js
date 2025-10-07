@@ -145,17 +145,17 @@ class ConfigSingleton {
    * Generadores de nombres dinámicos para eliminar hardcoding
    */
   getThemeHandle() {
-    // toulouse-lautrec -> toulouse-lautrec (para IDs HTML/CSS)
+    // theme-name -> theme-name (para IDs HTML/CSS)
     return this.config.theme.name;
   }
 
   getThemePrefix() {
-    // toulouse-lautrec -> toulouse_lautrec (prefijo básico)
+    // theme-name -> theme_name (prefijo básico)
     return this.config.theme.name.replace(/-/g, '_');
   }
 
   getThemeNamespace() {
-    // toulouse-lautrec -> toulouse_lautrec_design_system
+    // theme-name -> theme_name_design_system
     return `${this.getThemePrefix()}_design_system`;
   }
 

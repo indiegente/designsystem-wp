@@ -3,6 +3,7 @@ const path = require('path');
 const ExtensionManager = require('../extensions/extension-manager');
 const PhpComponentTemplate = require('../templates/php-components');
 const PHPValidator = require('../../validation/validators/php-validator');
+const DefaultValueParser = require('../utils/default-value-parser');
 
 class ComponentGenerator {
   constructor(config) {
@@ -395,7 +396,10 @@ class ComponentGenerator {
     if (!metadata) return '';
     
     return metadata.parameters
-      .map(param => `$${param.name} = '${param.default}'`)
+      .map(param => {
+        const phpDefault = DefaultValueParser.toPHP(param.default, param.type, 'function_param');
+        return `$${param.name} = ${phpDefault}`;
+      })
       .join(', ');
   }
 

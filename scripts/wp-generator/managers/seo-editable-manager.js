@@ -236,8 +236,15 @@ if (function_exists('acf_add_local_field_group')) {
 
 /**
  * Helper function para obtener configuración SEO editable por página
+ * Sistema robusto con fallback si ACF no está disponible
  */
 function get_page_seo_field($page_name, $field_name, $default_value = '') {
+  // ⚠️ IMPORTANTE: Verificar que ACF esté disponible antes de usarlo
+  if (!function_exists('get_field')) {
+    // ACF no está instalado/activado - usar valor por defecto
+    return $default_value;
+  }
+
   $field_key = $page_name . '_seo_' . $field_name;
   $value = get_field($field_key);
 
