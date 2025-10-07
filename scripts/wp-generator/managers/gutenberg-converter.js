@@ -196,16 +196,58 @@ add_action( 'init', '${functionPrefix}_register_${blockName}_block' );
 /**
  * Render callback for ${componentName} block
  * ✅ WORDPRESS STANDARD: Server-side rendering with proper sanitization
+ * ✅ FAIL-FAST: Verifica que web components estén disponibles
  */
 function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $block ) {
-    $wrapper_attributes = get_block_wrapper_attributes();
+    $wrapper_attributes = get_block_wrapper_attributes( array(
+        'class' => 'gutenberg-block-${componentName}',
+        'data-block-type' => '${themePrefix}/${componentName}',
+        'data-component-tag' => '${themePrefix}-${componentName}'
+    ) );
 
     $component_attrs = array();${this.generateComponentAttributesMapping(componentConfig.parameters || [])}
 
+    // ✅ DETECCIÓN: Script inline para verificar que web component existe
+    $component_tag = '${themePrefix}-${componentName}';
+    $debug_script = '';
+
+    if ( current_user_can( 'edit_posts' ) && ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
+        $debug_script = sprintf(
+            '<script>
+                (function() {
+                    if (!customElements.get("%s")) {
+                        console.error("❌ GUTENBERG BLOCK ERROR: Web Component <%s> NO está definido");
+                        console.error("📍 Verifica que toulouse-ds.umd.js o toulouse-ds.es.js se cargó correctamente");
+                        console.error("💡 Revisa wp_enqueue_scripts en asset-enqueue.php");
+
+                        // Marcar visualmente el bloque con error
+                        document.querySelectorAll("[data-component-tag=\'%s\']").forEach(function(block) {
+                            block.style.border = "3px solid red";
+                            block.style.padding = "20px";
+                            block.style.background = "#ffebee";
+                            var errorMsg = document.createElement("p");
+                            errorMsg.style.color = "red";
+                            errorMsg.style.fontWeight = "bold";
+                            errorMsg.textContent = "⚠️ Web Component <%s> no está registrado. Revisa la consola.";
+                            block.insertBefore(errorMsg, block.firstChild);
+                        });
+                    }
+                })();
+            </script>',
+            esc_js( $component_tag ),
+            esc_js( $component_tag ),
+            esc_js( $component_tag ),
+            esc_js( $component_tag )
+        );
+    }
+
     return sprintf(
-        '<div %s><${themePrefix}-${componentName} %s></${themePrefix}-${componentName}></div>',
+        '<div %s><%s %s></%s></div>%s',
         $wrapper_attributes,
-        implode( ' ', $component_attrs )
+        esc_html( $component_tag ),
+        implode( ' ', $component_attrs ),
+        esc_html( $component_tag ),
+        $debug_script
     );
 }
 
@@ -319,27 +361,38 @@ function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $bl
         );
     }
 
-    // ✅ WORDPRESS STANDARD: Register when WordPress is ready
-    wp.domReady(function() {
-        console.log('WordPress is ready, registering ${themePrefix}/${componentName}');
+    // ✅ WORDPRESS BEST PRACTICE: Registrar con metadata completa
+    // Cuando usas server-side rendering, JavaScript necesita toda la metadata
 
-        const blockConfig = {
-            title: '${this.generateBlockTitle(componentName)}',
-            description: '${this.generateBlockTitle(componentName)} component from the ${themeName}',
-            category: '${themePrefix}-blocks',
-            icon: 'admin-page',
-            keywords: ['${componentName}', '${themeName.toLowerCase()}', '${themePrefix}', 'component'],
-            edit: Edit,
-            save: function() {
-                return null; // Server-side rendering
-            }
-        };
+    wp.domReady(function() {
+        console.log('📦 Registrando bloque ${themePrefix}/${componentName}');
 
         try {
-            const result = wp.blocks.registerBlockType('${themePrefix}/${componentName}', blockConfig);
-            console.log('✅ ${this.generateBlockTitle(componentName)} registered:', result);
+            wp.blocks.registerBlockType('${themePrefix}/${componentName}', {
+                title: '${this.generateBlockTitle(componentName)}',
+                description: '${this.generateBlockTitle(componentName)} component from the ${themeName}',
+                category: '${themePrefix}-blocks',
+                icon: 'admin-page',
+                keywords: ['${componentName}', '${themeName.toLowerCase()}', '${themePrefix}', 'component'],
+                supports: {
+                    html: false,
+                    anchor: true,
+                    customClassName: true,
+                    className: true,
+                    reusable: true,
+                    inserter: true,
+                    multiple: ${componentConfig.type !== 'static' ? 'true' : 'false'}
+                },
+                edit: Edit,
+                save: function() {
+                    // ✅ OBLIGATORIO: save retorna null para server-side rendering
+                    return null;
+                }
+            });
+            console.log('✅ ${this.generateBlockTitle(componentName)} registrado correctamente');
         } catch (error) {
-            console.error('❌ Error registering ${componentName}:', error);
+            console.error('❌ Error registrando ${componentName}:', error);
+            console.error('Detalles:', error.message);
         }
     });
 
@@ -444,20 +497,49 @@ function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $bl
 
     /**
      * Genera style.css para el frontend del bloque
+     * ✅ WORDPRESS BEST PRACTICE: Reutiliza CSS del componente Lit original
      */
     generateBlockStyle(blockDir, componentName) {
         const themePrefix = this.config.themePrefix || 'ds';
+
+        // ✅ REUTILIZACIÓN: Buscar CSS del componente Lit original - FAIL FAST
+        const componentCssPath = path.join(process.cwd(), 'src', 'components', componentName, `${componentName}.css`);
+
+        if (!fs.existsSync(componentCssPath)) {
+            throw new Error(`❌ GUTENBERG BLOCK ERROR: CSS del componente Lit NO encontrado
+📍 Componente: ${componentName}
+📂 Ruta esperada: ${componentCssPath}
+💡 Solución: Crear ${componentName}.css en src/components/${componentName}/
+🚨 SIN FALLBACKS: CSS del componente Lit es OBLIGATORIO para bloques Gutenberg`);
+        }
+
+        const componentCss = fs.readFileSync(componentCssPath, 'utf8');
+        console.log(`✅ CSS reutilizado desde componente Lit: ${componentName}.css`);
 
         const styleCss = `/**
  * Frontend styles for ${componentName} block
  * Generated automatically from Lit Component
  * WordPress Standards Compliant
+ *
+ * ✅ REUTILIZACIÓN: Incluye CSS original del componente Lit
+ * Fuente: src/components/${componentName}/${componentName}.css
  */
+
+/* ====================================
+ * CSS DEL COMPONENTE LIT ORIGINAL
+ * Reutilizado para mantener consistencia entre Storybook y WordPress
+ * ==================================== */
+${componentCss}
+
+/* ====================================
+ * CSS ESPECÍFICO DE GUTENBERG BLOCK
+ * Alignment support y WordPress-specific styles
+ * ==================================== */
 
 /* Block container */
 .wp-block-${themePrefix}-${componentName} {
-    /* Frontend styles inherit from main theme CSS bundle */
-    /* This file is loaded only when block is used on a page */
+    /* Estilos del componente aplicados arriba */
+    display: block;
 }
 
 /* Block wrapper with alignment support */
@@ -623,7 +705,7 @@ function ${functionPrefix}_init_gutenberg_blocks() {
     }
 
     ${functionPrefix}_register_gutenberg_blocks();
-    ${functionPrefix}_register_block_category();
+    // Nota: La categoría se registra mediante el filtro 'block_categories_all' directamente
 }
 add_action( 'init', '${functionPrefix}_init_gutenberg_blocks' );
 
@@ -659,43 +741,30 @@ function ${functionPrefix}_register_gutenberg_blocks() {
 
 /**
  * Register custom block category
- * ✅ WORDPRESS STANDARD: Proper category registration with version check
+ * ✅ WORDPRESS STANDARD: Proper category registration using filter
  */
-function ${functionPrefix}_register_block_category() {
-    // Check if we're in the block editor context
-    if ( ! function_exists( 'get_current_screen' ) ) {
-        return;
-    }
-
-    $screen = get_current_screen();
-    if ( ! $screen || $screen->base !== 'post' ) {
-        return;
-    }
-
-    add_filter( 'block_categories_all', function( $categories ) {
-        return array_merge(
+function ${functionPrefix}_register_block_category( $categories ) {
+    // Agregar categoría al inicio del array
+    return array_merge(
+        array(
             array(
-                array(
-                    'slug'  => '${themePrefix}-blocks',
-                    'title' => __( '${themeDisplayName}', '${themeName}' ),
-                    'icon'  => 'star-filled'
-                )
-            ),
-            $categories
-        );
-    }, 10, 1 );
+                'slug'  => '${themePrefix}-blocks',
+                'title' => __( '${themeDisplayName}', '${themeName}' ),
+                'icon'  => 'star-filled'
+            )
+        ),
+        $categories
+    );
 }
+add_filter( 'block_categories_all', '${functionPrefix}_register_block_category', 10, 1 );
 
 /**
  * Enqueue block editor assets
  * ✅ WORDPRESS STANDARD: Conditional asset loading with cache busting
  */
 function ${functionPrefix}_enqueue_block_editor_assets() {
-    // Load in block editor context
-    // More permissive check for better compatibility
-    if ( ! is_admin() && ! wp_doing_ajax() && ! defined( 'REST_REQUEST' ) ) {
-        return;
-    }
+    // ✅ Este hook solo se ejecuta en el editor de bloques, no necesita validación adicional
+    // El hook 'enqueue_block_editor_assets' ya garantiza que estamos en el contexto correcto
 
     // Enqueue global editor CSS
     $css_path = get_template_directory() . '/assets/css/blocks-editor.css';
@@ -713,6 +782,44 @@ function ${functionPrefix}_enqueue_block_editor_assets() {
     ${functionPrefix}_enqueue_individual_block_scripts();
 }
 add_action( 'enqueue_block_editor_assets', '${functionPrefix}_enqueue_block_editor_assets' );
+
+/**
+ * Validación de Web Components en frontend
+ * ✅ WORDPRESS BEST PRACTICE: Solo en WP_DEBUG para debugging
+ */
+function ${functionPrefix}_validate_webcomponents_loaded() {
+    // Solo ejecutar si WP_DEBUG está activo y el usuario puede editar
+    if ( ! ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || ! current_user_can( 'edit_posts' ) ) {
+        return;
+    }
+
+    ?>
+    <script>
+    (function() {
+        window.addEventListener('DOMContentLoaded', function() {
+            var requiredComponents = ['${themePrefix}-course-card', '${themePrefix}-hero-section', '${themePrefix}-testimonials', '${themePrefix}-feature-grid', '${themePrefix}-interactive-gallery'];
+            var missing = [];
+
+            requiredComponents.forEach(function(tagName) {
+                if (!customElements.get(tagName)) {
+                    missing.push(tagName);
+                }
+            });
+
+            if (missing.length > 0) {
+                console.error('❌ WEB COMPONENTS ERROR: Los siguientes componentes NO están registrados:');
+                console.error(missing);
+                console.error('📍 Verifica que toulouse-ds.umd.js se cargó correctamente en asset-enqueue.php');
+                console.error('💡 Revisa errores de JavaScript en la consola');
+            } else {
+                console.log('✅ Todos los Web Components de bloques Gutenberg están registrados correctamente');
+            }
+        });
+    })();
+    </script>
+    <?php
+}
+add_action( 'wp_footer', '${functionPrefix}_validate_webcomponents_loaded', 999 );
 
 /**
  * Enqueue individual block editor scripts
