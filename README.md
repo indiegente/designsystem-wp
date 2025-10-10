@@ -1060,9 +1060,58 @@ npm run wp:lint:fix  # Auto-corrección
 
 ## 📚 Documentación Adicional
 
-- **[CLAUDE.md](CLAUDE.md)** - Instrucciones específicas para Claude
-- **[TUTORIAL_END_TO_END.md](TUTORIAL_END_TO_END.md)** - Tutorial completo
-- **[WORDPRESS-DEPLOYMENT.md](WORDPRESS-DEPLOYMENT.md)** - Despliegue WordPress
+- **[TUTORIAL_END_TO_END.md](TUTORIAL_END_TO_END.md)** - Tutorial completo end-to-end
+- **[CHANGELOG.md](CHANGELOG.md)** - Historial de cambios y mejoras
+
+## 🧩 Gutenberg Blocks Implementation
+
+### **Sistema de Bloques Robusto**
+
+El sistema incluye un registro de bloques Gutenberg con **fail-fast y validación completa**:
+
+```php
+// ✅ Sistema con doble hook para asegurar ejecución
+function toulouse_init_gutenberg_blocks() {
+    // ✅ FAIL-FAST: Validación estricta
+    if ( ! function_exists( 'register_block_type' ) ) {
+        throw new Exception('❌ GUTENBERG NO DISPONIBLE');
+    }
+
+    toulouse_register_gutenberg_blocks();
+}
+add_action( 'init', 'toulouse_init_gutenberg_blocks' );
+
+// ✅ FORZAR registro con hook adicional
+function toulouse_force_register_blocks() {
+    toulouse_register_gutenberg_blocks();
+}
+add_action( 'wp_loaded', 'toulouse_force_register_blocks' );
+```
+
+### **Características del Sistema de Bloques**
+
+- ✅ **Auto-discovery**: Detecta automáticamente bloques en `/blocks/`
+- ✅ **Validación JSON**: Verifica estructura `block.json` antes de registro
+- ✅ **Doble Hook**: `init` + `wp_loaded` para asegurar ejecución
+- ✅ **Fail-Fast**: Error claro si falta estructura requerida
+- ✅ **Logging**: Reportes detallados de bloques registrados/fallidos
+
+### **Componentes Generados como Bloques**
+
+Todos los componentes Lit se convierten automáticamente a bloques Gutenberg:
+
+- `tl/hero-section` → Bloque Hero Section
+- `tl/course-card` → Bloque Course Card
+- `tl/testimonials` → Bloque Testimonials
+- `tl/feature-grid` → Bloque Feature Grid
+- `tl/interactive-gallery` → Bloque Interactive Gallery
+
+### **Uso en WordPress**
+
+1. **Los bloques aparecen automáticamente** en el editor de WordPress
+2. **Se registran en categoría "Toulouse Lautrec Theme"**
+3. **Renderizado seguro** con escape automático via PHP
+4. **Edición visual** con atributos configurables
 
 ## 🏆 Estado del Proyecto
 

@@ -273,81 +273,7 @@ customElements.define('tl-product-card', ProductCard);
 # 2. Eliminar import css from 'lit'
 # 3. Regenerar con npm run wp:generate
 ```
-      margin-bottom: var(--tl-spacing-4);
-    }
-
-    .product-price {
-      font-size: var(--tl-font-size-2xl);
-      font-weight: 700;
-      color: var(--tl-primary-600);
-      margin-bottom: var(--tl-spacing-4);
-    }
-
-    .product-link {
-      display: inline-flex;
-      align-items: center;
-      background: var(--tl-primary-500);
-      color: white;
-      padding: var(--tl-spacing-3) var(--tl-spacing-4);
-      border-radius: var(--tl-spacing-2);
-      text-decoration: none;
-      font-weight: 600;
-      transition: var(--tl-transition-normal);
-    }
-
-    .product-link:hover {
-      background: var(--tl-primary-600);
-      transform: translateY(-1px);
-    }
-
-    .product-link::after {
-      content: '→';
-      margin-left: var(--tl-spacing-2);
-      transition: var(--tl-transition-normal);
-    }
-
-    .product-link:hover::after {
-      transform: translateX(4px);
-    }
-  `;
-
-  render() {
-    return html`
-      <div class="product-card ${this.featured ? 'featured' : ''}">
-        ${this.image ? html`
-          <img 
-            class="product-image" 
-            src="${this.image}" 
-            alt="${this.title}"
-            loading="lazy"
-          />
-        ` : ''}
-        
-        ${this.category ? html`
-          <div class="product-category">${this.category}</div>
-        ` : ''}
-        
-        <h3 class="product-title">${this.title}</h3>
-        
-        ${this.description ? html`
-          <p class="product-description">${this.description}</p>
-        ` : ''}
-        
-        ${this.price ? html`
-          <div class="product-price">${this.price}</div>
-        ` : ''}
-        
-        ${this.link ? html`
-          <a href="${this.link}" class="product-link">
-            ${this.linkText}
-          </a>
-        ` : ''}
-      </div>
-    `;
-  }
-}
-
-customElements.define('tl-product-card', ProductCard);
+  // ✅ SIN static styles - CSS en archivo separado
 ```
 
 ### Paso 2: Documentar en Storybook (Actualizado con Mocks Personalizados)
@@ -2910,6 +2836,69 @@ npm run wp:validate
 
 # Generar con validación estricta (falla si hay inconsistencias)
 npm run wp:generate
+```
+
+## 🧩 Paso 8: Configurar Gutenberg Blocks
+
+### 8.1 Sistema de Bloques Automático
+
+El sistema genera automáticamente bloques Gutenberg para cada componente Lit. Los bloques se registran con doble hook para asegurar ejecución.
+
+#### Estructura de Bloque Generada
+
+Cada componente genera:
+- **`block.json`** - Metadatos del bloque (nombre, título, categoría)
+- **`index.php`** - Registro y render callback
+- **`edit.js`** - Interfaz del editor de WordPress
+- **`editor.css`** - Estilos del editor
+
+#### Verificación de Registro
+
+```bash
+# Generar tema con bloques
+npm run wp:generate
+
+# Verificar logs de registro
+tail -f /var/log/apache2/error.log
+```
+
+**Salida esperada:**
+```
+✅ BLOQUES REGISTRADOS: 5 bloques procesados exitosamente
+✅ HERO-SECTION: Block registered successfully
+✅ COURSE-CARD: Block registered successfully
+```
+
+### 8.2 Uso de Bloques en WordPress
+
+1. **En el Editor de Bloques:**
+   - Los bloques aparecen en categoría "Toulouse Lautrec Theme"
+   - Arrastrar y soltar para usar
+   - Configurar atributos en panel lateral
+
+2. **En el Frontend:**
+   - Los bloques renderizan con PHP seguro
+   - Escapado automático según metadata.json
+   - Optimizado para Core Web Vitals
+
+### 8.3 Troubleshooting de Bloques
+
+**Problema: Bloque no aparece en editor**
+```bash
+# Verificar si el tema está activo
+wp theme list --status=active
+
+# Verificar logs de error
+grep "BLOQUES" /var/log/apache2/error.log
+```
+
+**Problema: Bloque no renderiza en frontend**
+```bash
+# Verificar error de PHP
+php -l wordpress-output/toulouse-lautrec/blocks/hero-section/index.php
+
+# Verificar función render
+grep "render_hero_section" wordpress-output/toulouse-lautrec/components/hero-section/hero-section.php
 ```
 
 ## 🚀 Despliegue en Producción
