@@ -132,8 +132,7 @@ class GutenbergConverter {
             "textdomain": themeName,
             "editorScript": "file:./edit.js",
             "editorStyle": "file:./editor.css",
-            "style": "file:./style.css",
-            "render": `${functionPrefix}_render_${blockName}_block`
+            "style": "file:./style.css"
         };
 
         // Agregar arrayFields como attributes complejos
@@ -161,6 +160,11 @@ class GutenbergConverter {
         const functionPrefix = this.config.phpFunctionPrefix || 'toulouse';
         const blockName = componentName.replace(/-/g, '_');
         const themePrefix = this.config.themePrefix || 'tl';
+        const renderFunctionName = `render_${blockName}`;
+        const componentPhpPath = `/components/${componentName}/${componentName}.php`;
+
+        const attributeExtractions = this.generateAttributeExtractions(componentConfig.parameters || []);
+        const functionCallParams = this.generateFunctionCallParams(componentConfig.parameters || []);
 
         const indexPhp = `<?php
 /**
@@ -177,80 +181,33 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Register ${componentName} block
- * ✅ WORDPRESS STANDARD: Hybrid registration for robust frontend/editor support
- */
-function ${functionPrefix}_register_${blockName}_block() {
-    if ( ! function_exists( 'register_block_type' ) ) {
-        return;
-    }
-
-    // Register with explicit render callback for reliability
-    register_block_type( '${themePrefix}/${componentName}', array(
-        'render_callback' => '${functionPrefix}_render_${blockName}_block',
-        'attributes' => array(${this.generateBlockAttributesArray(componentConfig.parameters || [])})
-    ));
-}
-add_action( 'init', '${functionPrefix}_register_${blockName}_block' );
-
-/**
  * Render callback for ${componentName} block
- * ✅ WORDPRESS STANDARD: Server-side rendering with proper sanitization
- * ✅ FAIL-FAST: Verifica que web components estén disponibles
+ * Calls existing component render function
  */
 function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $block ) {
-    $wrapper_attributes = get_block_wrapper_attributes( array(
-        'class' => 'gutenberg-block-${componentName}',
-        'data-block-type' => '${themePrefix}/${componentName}',
-        'data-component-tag' => '${themePrefix}-${componentName}'
-    ) );
-
-    $component_attrs = array();${this.generateComponentAttributesMapping(componentConfig.parameters || [])}
-
-    // ✅ DETECCIÓN: Script inline para verificar que web component existe
-    $component_tag = '${themePrefix}-${componentName}';
-    $debug_script = '';
-
-    if ( current_user_can( 'edit_posts' ) && ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ) {
-        $debug_script = sprintf(
-            '<script>
-                (function() {
-                    if (!customElements.get("%s")) {
-                        console.error("❌ GUTENBERG BLOCK ERROR: Web Component <%s> NO está definido");
-                        console.error("📍 Verifica que toulouse-ds.umd.js o toulouse-ds.es.js se cargó correctamente");
-                        console.error("💡 Revisa wp_enqueue_scripts en asset-enqueue.php");
-
-                        // Marcar visualmente el bloque con error
-                        document.querySelectorAll("[data-component-tag=\'%s\']").forEach(function(block) {
-                            block.style.border = "3px solid red";
-                            block.style.padding = "20px";
-                            block.style.background = "#ffebee";
-                            var errorMsg = document.createElement("p");
-                            errorMsg.style.color = "red";
-                            errorMsg.style.fontWeight = "bold";
-                            errorMsg.textContent = "⚠️ Web Component <%s> no está registrado. Revisa la consola.";
-                            block.insertBefore(errorMsg, block.firstChild);
-                        });
-                    }
-                })();
-            </script>',
-            esc_js( $component_tag ),
-            esc_js( $component_tag ),
-            esc_js( $component_tag ),
-            esc_js( $component_tag )
-        );
+    // Load component render function if not already loaded
+    if ( ! function_exists( '${renderFunctionName}' ) ) {
+        require_once get_template_directory() . '${componentPhpPath}';
     }
 
-    return sprintf(
-        '<div %s><%s %s></%s></div>%s',
-        $wrapper_attributes,
-        esc_html( $component_tag ),
-        implode( ' ', $component_attrs ),
-        esc_html( $component_tag ),
-        $debug_script
-    );
+    // Extract attributes with defaults
+    ${attributeExtractions}
+
+    // Capture output from component render function
+    ob_start();
+    ${renderFunctionName}(${functionCallParams});
+    return ob_get_clean();
 }
 
+/**
+ * Register ${componentName} block
+ * ✅ WORDPRESS BEST PRACTICE: Register with explicit render callback
+ */
+if ( function_exists( 'register_block_type' ) ) {
+    register_block_type( __DIR__, array(
+        'render_callback' => '${functionPrefix}_render_${blockName}_block'
+    ) );
+}
 ?>`;
 
         const indexPhpPath = path.join(blockDir, 'index.php');
@@ -374,6 +331,8 @@ function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $bl
                 category: '${themePrefix}-blocks',
                 icon: 'admin-page',
                 keywords: ['${componentName}', '${themeName.toLowerCase()}', '${themePrefix}', 'component'],
+                attributes: {${this.generateAttributesForJS(componentConfig.parameters || [])}
+                },
                 supports: {
                     html: false,
                     anchor: true,
@@ -493,6 +452,33 @@ function ${functionPrefix}_render_${blockName}_block( $attributes, $content, $bl
             const phpDefault = DefaultValueParser.toPHP(param.default, param.type, 'function_param');
             return `isset( $sanitized_attributes['${param.name}'] ) ? $sanitized_attributes['${param.name}'] : ${phpDefault}`;
         }).join(', ');
+    }
+
+    /**
+     * Genera extracciones de atributos para render.php
+     * Crea variables PHP desde $attributes array
+     */
+    generateAttributeExtractions(parameters) {
+        if (!parameters || parameters.length === 0) {
+            return '';
+        }
+
+        return parameters.map(param => {
+            const phpDefault = DefaultValueParser.toPHP(param.default, param.type, 'function_param');
+            return `$${param.name} = isset( $attributes['${param.name}'] ) ? $attributes['${param.name}'] : ${phpDefault};`;
+        }).join('\n');
+    }
+
+    /**
+     * Genera lista de parámetros para llamada de función
+     * Retorna nombres de variables separados por comas
+     */
+    generateFunctionCallParams(parameters) {
+        if (!parameters || parameters.length === 0) {
+            return '';
+        }
+
+        return parameters.map(param => `$${param.name}`).join(', ');
     }
 
     /**
@@ -685,6 +671,7 @@ ${componentCss}
  * Gutenberg Blocks Registration
  * WordPress Standards Compliant
  * Generated automatically from Lit Components
+ * ✅ FAIL-FAST: Robust error handling and validation
  *
  * @package ${themeName}
  * @since 1.0.0
@@ -696,46 +683,132 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Initialize blocks registration
- * ✅ WORDPRESS STANDARD: Proper initialization with capability checks
+ * ✅ WORDPRESS STANDARD: Proper initialization with fail-fast validation
  */
 function ${functionPrefix}_init_gutenberg_blocks() {
-    // Only register blocks if Gutenberg is available
+    // ✅ FAIL-FAST: Validate Gutenberg availability
     if ( ! function_exists( 'register_block_type' ) ) {
-        return;
+        throw new Exception('❌ GUTENBERG NO DISPONIBLE: register_block_type() function no existe');
+    }
+
+    // ✅ FAIL-FAST: Validate blocks directory
+    $blocks_dir = get_template_directory() . '/blocks/';
+    if ( ! is_dir( $blocks_dir ) ) {
+        throw new Exception('❌ DIRECTORIO BLOQUES NO ENCONTRADO: /blocks/ no existe en ' . $blocks_dir);
     }
 
     ${functionPrefix}_register_gutenberg_blocks();
-    // Nota: La categoría se registra mediante el filtro 'block_categories_all' directamente
 }
 add_action( 'init', '${functionPrefix}_init_gutenberg_blocks' );
 
 /**
+ * ✅ CRÍTICO: FORZAR registro con hook adicional para asegurar ejecución
+ * ✅ WORDPRESS BEST PRACTICE: Multiple hook registration para asegurar ejecución
+ * Evita problemas donde el hook init puede no ejecutarse correctamente
+ */
+function ${functionPrefix}_force_register_blocks() {
+    // ✅ FAIL-FAST: Validate Gutenberg availability
+    if ( ! function_exists( 'register_block_type' ) ) {
+        throw new Exception('❌ GUTENBERG NO DISPONIBLE en wp_loaded: register_block_type() function no existe');
+    }
+
+    // ✅ FAIL-FAST: Validate blocks directory
+    $blocks_dir = get_template_directory() . '/blocks/';
+    if ( ! is_dir( $blocks_dir ) ) {
+        throw new Exception('❌ DIRECTORIO BLOQUES NO ENCONTRADO en wp_loaded: /blocks/ no existe en ' . $blocks_dir);
+    }
+
+    ${functionPrefix}_register_gutenberg_blocks();
+}
+add_action( 'wp_loaded', '${functionPrefix}_force_register_blocks' );
+
+/**
  * Auto-discovery and registration of blocks
- * ✅ WORDPRESS STANDARD: Safe block discovery and registration
+ * ✅ WORDPRESS STANDARD: Safe block discovery with fail-fast validation
  */
 function ${functionPrefix}_register_gutenberg_blocks() {
     $blocks_dir = get_template_directory() . '/blocks/';
 
+    // ✅ FAIL-FAST: Validate directory (double check)
     if ( ! is_dir( $blocks_dir ) ) {
-        return;
+        throw new Exception('❌ DIRECTORIO BLOQUES INVÁLIDO: /blocks/ no es un directorio válido');
+    }
+
+    // ✅ FAIL-FAST: Check directory is readable
+    if ( ! is_readable( $blocks_dir ) ) {
+        throw new Exception('❌ DIRECTORIO BLOQUES NO LEGIBLE: /blocks/ no tiene permisos de lectura');
     }
 
     // ✅ WORDPRESS STANDARD: Use directory iterator for better performance
     $iterator = new DirectoryIterator( $blocks_dir );
+    $registered_blocks = 0;
+    $failed_blocks = array();
 
     foreach ( $iterator as $dir ) {
         if ( $dir->isDot() || ! $dir->isDir() ) {
             continue;
         }
 
+        $block_name = $dir->getFilename();
         $block_path = $dir->getPathname();
         $block_json = $block_path . '/block.json';
         $block_index = $block_path . '/index.php';
 
-        // ✅ OBLIGATORIO: Validate block structure before registration
-        if ( file_exists( $block_json ) && file_exists( $block_index ) ) {
+        try {
+            // ✅ FAIL-FAST: Validate block structure
+            if ( ! file_exists( $block_json ) ) {
+                throw new Exception("block.json no encontrado en {$block_path}");
+            }
+
+            if ( ! file_exists( $block_index ) ) {
+                throw new Exception("index.php no encontrado en {$block_path}");
+            }
+
+            // ✅ FAIL-FAST: Validate files are readable
+            if ( ! is_readable( $block_json ) ) {
+                throw new Exception("block.json no es legible en {$block_json}");
+            }
+
+            if ( ! is_readable( $block_index ) ) {
+                throw new Exception("index.php no es legible en {$block_index}");
+            }
+
+            // ✅ WORDPRESS STANDARD: Validate block.json schema
+            $block_data = json_decode( file_get_contents( $block_json ), true );
+            if ( json_last_error() !== JSON_ERROR_NONE ) {
+                throw new Exception("block.json JSON inválido: " . json_last_error_msg());
+            }
+
+            // ✅ FAIL-FAST: Validate required block.json fields
+            $required_fields = array('name', 'title', 'category');
+            foreach ( $required_fields as $field ) {
+                if ( empty( $block_data[$field] ) ) {
+                    throw new Exception("block.json campo requerido '{$field}' faltante en {$block_name}");
+                }
+            }
+
+            // Load and execute block registration
             require_once $block_index;
+            $registered_blocks++;
+
+        } catch ( Exception $e ) {
+            $failed_blocks[] = "{$block_name}: " . $e->getMessage();
+
+            // ✅ FAIL-FAST: En desarrollo, fallar inmediatamente
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                throw new Exception("❌ ERROR CRÍTICO EN BLOQUE {$block_name}: " . $e->getMessage());
+            }
         }
+    }
+
+    // ✅ LOGGING: Report results in development
+    if ( defined( 'WP_DEBUG' ) && WP_DEBUG && ! empty( $failed_blocks ) ) {
+        error_log("⚠️ BLOQUES FALLIDOS: " . implode( ', ', $failed_blocks ));
+    }
+
+    // ✅ LOGGING: Success confirmation
+    if ( $registered_blocks > 0 ) {
+        error_log("✅ BLOQUES REGISTRADOS: {$registered_blocks} bloques procesados exitosamente");
     }
 }
 
@@ -1152,6 +1225,24 @@ if ( ! function_exists( '${functionPrefix}_render_block_fallback' ) ) {
             .replace(/([A-Z])/g, ' $1')
             .replace(/^./, str => str.toUpperCase())
             .trim();
+    }
+
+    /**
+     * Genera atributos para registro JavaScript del bloque
+     */
+    generateAttributesForJS(parameters) {
+        if (!parameters || parameters.length === 0) {
+            return '';
+        }
+
+        return '\n' + parameters.map(param => {
+            const type = this.mapTypeToGutenbergType(param.type);
+            const defaultValue = DefaultValueParser.toJS(param.default, param.type, 'gutenberg');
+            return `                    ${param.name}: {
+                        type: '${type}',
+                        default: ${JSON.stringify(defaultValue)}
+                    }`;
+        }).join(',\n');
     }
 
     /**

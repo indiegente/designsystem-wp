@@ -155,7 +155,13 @@ ${configEntries.join(',\n')}
 function ${this.functionPrefix}_theme_setup() {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
-    
+
+    // ✅ GUTENBERG SUPPORT: Enable block editor features
+    add_theme_support('editor-styles');
+    add_theme_support('wp-block-styles');
+    add_theme_support('align-wide');
+    add_theme_support('responsive-embeds');
+
     register_nav_menus(array(
         'primary' => __('Menú Principal', '${this.enqueueHandle}'),
         'footer' => __('Menú Footer', '${this.enqueueHandle}')

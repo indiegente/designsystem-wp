@@ -178,7 +178,7 @@ get_header();
                 </header>
 
                 <div class="entry-content">
-                    <?php the_excerpt(); ?>
+                    <?php the_content(); ?>
                 </div>
             </article>
             <?php
